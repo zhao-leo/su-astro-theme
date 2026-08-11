@@ -1,0 +1,56 @@
+---
+import RadialLayout from '../../layouts/RadialLayout.astro';
+import { buildRings } from '../../lib/circle';
+import { sortById } from '../../lib/utils';
+import { Icon } from 'astro-icon/components';
+import { getCollection } from 'astro:content';
+
+const projects = sortById(await getCollection('projects'));
+const tags = [...new Set(projects.flatMap((p) => p.data.tags))];
+const rings = buildRings({
+	current: 'projects',
+	core: { title: '项目', subtitle: 'PROJECTS' },
+});
+---
+
+<RadialLayout title="项目" description="项目展示" rings={rings} core={{ title: '项目', subtitle: 'PROJECTS' }}>
+	<header class="mb-6">
+		<h1 class="text-3xl font-bold">项目</h1>
+		<p class="opacity-60 mt-1">共 {projects.length} 个项目</p>
+	</header>
+
+	{projects.length > 0 ? (
+		<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+			{projects.map((project) => (
+				<article class="glass rounded-box p-5">
+					<h3 class="text-lg font-bold flex items-center gap-2">
+						{project.data.title}
+						{project.data.featured && <span class="badge badge-warning badge-sm">精选</span>}
+					</h3>
+					{project.data.description && <p class="text-sm opacity-70 mt-2">{project.data.description}</p>}
+					<div class="flex flex-wrap gap-1.5 mt-3">
+						{project.data.tags.map((tag) => (
+							<a class="badge badge-soft badge-neutral badge-sm no-underline" href={`/projects/tag/${tag}/`}>
+								#{tag}
+							</a>
+						))}
+					</div>
+					<div class="flex flex-wrap gap-2 mt-4">
+						<a class="btn btn-sm" href={project.data.url} rel="noopener" target="_blank">
+							<Icon name="lucide:globe" class="w-4 h-4" />
+							项目主页
+						</a>
+						{project.data.repo && (
+							<a class="btn btn-sm btn-ghost" href={project.data.repo} rel="noopener" target="_blank">
+								<Icon name="lucide:github" class="w-4 h-4" />
+								源码
+							</a>
+						)}
+					</div>
+				</article>
+			))}
+		</div>
+	) : (
+		<p class="opacity-60">还没有项目。</p>
+	)}
+</RadialLayout>

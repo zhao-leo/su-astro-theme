@@ -1,0 +1,68 @@
+---
+import RadialLayout from '../layouts/RadialLayout.astro';
+import { buildRings } from '../lib/circle';
+import { Icon } from 'astro-icon/components';
+import { getSite } from '../lib/site';
+
+const site = await getSite();
+// 萌ICP备案链接：从文字中提取数字拼装（如 “萌ICP备20250610号” → ?keyword=20250610）
+const moeicpUrl = site.footer?.moeicp
+	? `https://icp.gov.moe/?keyword=${site.footer.moeicp.match(/\d+/)?.[0] ?? ''}`
+	: '';
+const rings = buildRings({
+	current: 'home',
+
+	core: { title: '首页', subtitle: 'INDEX' },
+});
+
+const jsonLd = {
+	'@context': 'https://schema.org',
+	'@type': 'WebSite',
+	name: site.title,
+	description: site.description,
+	url: new URL('/', Astro.site).href,
+	author: { '@type': 'Person', name: site.author },
+	inLanguage: site.language,
+};
+---
+
+<RadialLayout title={site.title} description={site.description} rings={rings} core={{ title: '首页', subtitle: 'INDEX' }}>
+	<script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+
+	<div class="glass rounded-box p-8">
+		<div class="flex items-center gap-4 mb-6">
+			<div class="avatar">
+				<div class="w-16 rounded-full ring-2 ring-base-300">
+					{site.profile?.avatar && <img src={site.profile.avatar} alt={`${site.author} 的头像`} />}
+				</div>
+			</div>
+			<div>
+				<h1 class="text-3xl font-bold">{site.title}</h1>
+				<p class="text-sm opacity-50 mt-1">作者：{site.author}</p>
+			</div>
+		</div>
+		<p class="opacity-70 leading-relaxed">{site.description}</p>
+		<div class="flex flex-wrap gap-2 mt-6">
+			{site.profile?.links?.map((l) => (
+				<a class="btn btn-sm btn-ghost" href={l.url} target="_blank" rel="noopener">
+					{l.icon && <Icon name={l.icon} class="w-4 h-4" />}
+					{l.name}
+				</a>
+			))}
+		</div>
+		{site.footer?.icp && (
+			<p class="text-sm opacity-50 mt-6">
+				<a class="link link-hover" href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">
+					{site.footer.icp}
+				</a>
+			</p>
+		)}
+		{site.footer?.moeicp && (
+			<p class="text-sm opacity-50 mt-2">
+				<a class="link link-hover" href={moeicpUrl} target="_blank" rel="noopener">
+					{site.footer.moeicp}
+				</a>
+			</p>
+		)}
+	</div>
+</RadialLayout>

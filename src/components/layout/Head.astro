@@ -1,0 +1,132 @@
+---
+import { SEO } from 'astro-seo';
+import { getSite } from '../../lib/site';
+import { absoluteUrl } from '../../lib/seo';
+
+interface Props {
+	title?: string;
+	description?: string;
+	image?: string;
+	type?: 'website' | 'article';
+	canonical?: string;
+	noindex?: boolean;
+	article?: {
+		publishedTime?: string;
+		modifiedTime?: string;
+		authors?: string[];
+		tags?: string[];
+	};
+}
+
+const { title, description, image, type = 'website', canonical, noindex = false, article } = Astro.props;
+
+const site = await getSite();
+const ogImage = absoluteUrl(image) ?? absoluteUrl(site.seo?.ogImage);
+const pageTitle = title ?? site.title;
+const pageDescription = description ?? site.description;
+const canonicalUrl = canonical ? new URL(canonical, Astro.site).href : Astro.url.href;
+
+const openGraph = ogImage
+	? {
+			basic: {
+				title: pageTitle,
+				type,
+				image: ogImage,
+				url: canonicalUrl,
+			},
+			optional: {
+				description: pageDescription,
+				siteName: site.title,
+				locale: site.language === 'zh-CN' ? 'zh_CN' : 'en_US',
+			},
+			article,
+		}
+	: undefined;
+---
+
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<link rel="icon" type="image/png" href="/favicon.png" />
+	<link rel="alternate" type="application/rss+xml" title="博客订阅" href="/rss.xml" />
+	<link rel="alternate" type="application/rss+xml" title="相册订阅" href="/rss-albums.xml" />
+	{/* 中文字体：霞鹜文楷（LXGW WenKai，unicode-range 子集按需加载） */}
+	<link rel="stylesheet" href="/fonts/lxgw-wenkai/regular.css" />
+	<link rel="stylesheet" href="/fonts/lxgw-wenkai/bold.css" />
+	<!-- 代码块复制按钮（icon 版） -->
+	<script>
+		// 给所有 shiki 代码块（.astro-code）添加右上角复制按钮
+		const codeBlocks = document.querySelectorAll<HTMLElement>('.astro-code');
+		codeBlocks.forEach((pre) => {
+			if (pre.querySelector('.code-copy-btn')) return;
+			const btn = document.createElement('button');
+			btn.type = 'button';
+			btn.className = 'code-copy-btn';
+			btn.setAttribute('aria-label', '复制代码');
+			btn.innerHTML =
+				'<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+			btn.addEventListener('click', async () => {
+				const text = pre.querySelector('code')?.textContent ?? '';
+				const done = () => {
+					btn.innerHTML =
+						'<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+					btn.classList.add('code-copy-done');
+					setTimeout(() => {
+						btn.innerHTML =
+							'<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+						btn.classList.remove('code-copy-done');
+					}, 1500);
+				};
+				try {
+					await navigator.clipboard.writeText(text);
+					done();
+				} catch {
+					// 非安全上下文回退
+					const ta = document.createElement('textarea');
+					ta.value = text;
+					ta.style.position = 'fixed';
+					ta.style.opacity = '0';
+					document.body.append(ta);
+					ta.select();
+					document.execCommand('copy');
+					ta.remove();
+					done();
+				}
+			});
+			pre.append(btn);
+		});
+	</script>
+	<!-- 首屏前确定主题，避免闪烁（默认 nord / business） -->
+	<script is:inline>
+		(function () {
+			try {
+				var saved = localStorage.getItem('theme');
+				var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+				var theme = saved || (prefersDark ? 'business' : 'nord');
+				document.documentElement.dataset.theme = theme;
+				// 主题明暗：驱动代码高亮
+				var darkThemes = ['dim', 'sunset', 'dracula', 'dark', 'synthwave', 'business', 'night', 'luxury'];
+				document.documentElement.dataset.themeMode =
+					darkThemes.indexOf(theme) >= 0 ? 'dark' : 'light';
+			} catch (e) {
+				document.documentElement.dataset.theme = 'nord';
+				document.documentElement.dataset.themeMode = 'light';
+			}
+		})();
+	</script>
+	<SEO
+		title={title}
+		titleTemplate={`%s · ${site.title}`}
+		titleDefault={site.title}
+		description={pageDescription}
+		canonical={canonicalUrl}
+		noindex={noindex}
+		openGraph={openGraph}
+		twitter={{
+			card: 'summary_large_image',
+			site: site.seo?.twitter,
+			creator: site.seo?.twitter,
+			image: ogImage,
+		}}
+	/>
+</head>

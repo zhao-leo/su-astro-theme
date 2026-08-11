@@ -1,0 +1,255 @@
+---
+import { getSite } from '../../lib/site';
+import { Icon } from 'astro-icon/components';
+
+const site = await getSite();
+const profile = site.profile;
+const total = site.nav.length + 1; // 导航项 + 主题切换
+---
+
+<header id="site-nav" class="fixed z-20 select-none" style="left: 24px; top: 24px">
+	<!-- 头像：组件中心，可按住拖拽 -->
+	<div
+		id="nav-toggle"
+		class="relative w-12 h-12 cursor-grab active:cursor-grabbing"
+		data-drag-handle
+		title={site.title}
+		aria-label="导航"
+	>
+		<img
+			src={profile?.avatar}
+			class="relative z-10 w-12 h-12 rounded-full object-cover block pointer-events-none select-none ring-2 ring-base-300 shadow-md"
+			alt=""
+			aria-hidden="true"
+			loading="lazy"
+			draggable="false"
+		/>
+
+		<!-- 圆形底：让图标在背景上清晰可见 -->
+		<div class="nav-backdrop" aria-hidden="true"></div>
+
+		<!-- 圆形排列：导航图标围绕头像等角度分布 -->
+		{site.nav.map((item, i) => (
+			<a
+				class="nav-item btn btn-ghost btn-circle"
+				href={item.href}
+				title={item.label}
+				aria-label={item.label}
+				style={`--i: ${i}; --n: ${total}`}
+			>
+				{item.icon ? (
+					<Icon name={item.icon} class="w-5 h-5" />
+				) : (
+					<span class="text-sm font-semibold">{item.label.slice(0, 1)}</span>
+				)}
+			</a>
+		))}
+
+		<!-- 主题切换：同样进入圆形排列 -->
+		<button
+			id="theme-toggle"
+			class="nav-item btn btn-ghost btn-circle swap swap-rotate"
+			title="切换深色 / 浅色"
+			aria-label="切换深色 / 浅色"
+			style={`--i: ${site.nav.length}; --n: ${total}`}
+		>
+			<span class="swap-off"><Icon name="lucide:moon" class="w-5 h-5" /></span>
+			<span class="swap-on"><Icon name="lucide:sun" class="w-5 h-5" /></span>
+		</button>
+	</div>
+</header>
+
+<!-- header 已解析：立即恢复折叠状态（此时为页面初始状态，无动画/无闪烁）；并禁用折叠动画直到初始化完成 -->
+<script is:inline>
+	try {
+		if (localStorage.getItem('nav-collapsed') === '1') {
+			document.getElementById('site-nav')?.classList.add('nav-collapsed');
+		}
+	} catch {
+		/* 忽略 */
+	}
+	document.documentElement.classList.add('no-nav-anim');
+</script>
+
+<style>
+	#site-nav {
+		--r: 64px; /* 圆形排列半径 */
+	}
+	@media (max-width: 640px) {
+		#site-nav {
+			--r: 50px;
+		}
+	}
+	/* 圆形底：覆盖整个排列区域，收起时向中心收缩 */
+	#site-nav .nav-backdrop {
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		width: calc(2 * (var(--r) + 1.75rem));
+		height: calc(2 * (var(--r) + 1.75rem));
+		transform: translate(-50%, -50%);
+		border-radius: 50%;
+		background: var(--color-base-100) / 0.85;
+		backdrop-filter: blur(6px);
+		border: 1px solid var(--color-base-300);
+		box-shadow: 0 6px 24px rgb(0 0 0 / 0.08);
+		z-index: 0;
+		transition:
+			transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
+			opacity 0.3s ease;
+	}
+	#site-nav.nav-collapsed .nav-backdrop {
+		transform: translate(-50%, -50%) scale(0.6);
+		opacity: 0;
+		/* 收起：先收按钮（stagger 45ms 逐项），再收外圈底 */
+		transition-delay: 0.35s;
+	}
+	/* 图标按钮：围绕头像呈圆形等角分布 */
+	#site-nav .nav-item {
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		width: 2.75rem;
+		height: 2.75rem;
+		z-index: 1;
+		--angle: calc(var(--i) * (360deg / var(--n)));
+		transform: translate(-50%, -50%)
+			translate(calc(cos(var(--angle)) * var(--r)), calc(sin(var(--angle)) * var(--r)));
+		opacity: 1;
+		transition:
+			transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+			opacity 0.35s ease;
+		transition-delay: calc(var(--i) * 45ms);
+	}
+	/* 点击收起：图标向中心收缩消失（再点从中心向外扩散展开） */
+	#site-nav.nav-collapsed .nav-item {
+		transform: translate(-50%, -50%) scale(0);
+		opacity: 0;
+		pointer-events: none;
+		transition-delay: calc((var(--n) - var(--i)) * 45ms);
+	}
+	#site-nav.nav-dragging {
+		user-select: none;
+	}
+	/* 页面加载/切换时禁用折叠动画（初始化完成后由脚本移除） */
+	html.no-nav-anim #site-nav .nav-item,
+	html.no-nav-anim #site-nav .nav-backdrop {
+		transition: none !important;
+	}
+</style>
+<script>
+	// 主题：深色（business）/ 浅色（nord）切换
+	const DARK_THEMES = ['dim', 'sunset', 'dracula', 'dark', 'synthwave', 'business', 'night', 'luxury'];
+	const LIGHT_THEME = 'nord';
+	const DARK_THEME = 'business';
+	const isDark = (t: string) => DARK_THEMES.includes(t);
+	const toggle = document.getElementById('theme-toggle');
+
+	const applyTheme = (theme: string) => {
+		document.documentElement.dataset.theme = theme;
+		document.documentElement.dataset.themeMode = isDark(theme) ? 'dark' : 'light';
+		try {
+			localStorage.setItem('theme', theme);
+		} catch {
+			/* 忽略 */
+		}
+		toggle?.classList.toggle('swap-active', isDark(theme));
+	};
+	applyTheme(document.documentElement.dataset.theme || LIGHT_THEME);
+
+	toggle?.addEventListener('click', () => {
+		const current = document.documentElement.dataset.theme;
+		applyTheme(isDark(current ?? LIGHT_THEME) ? LIGHT_THEME : DARK_THEME);
+	});
+
+	const nav = document.getElementById('site-nav');
+	const handle = document.querySelector<HTMLElement>('[data-drag-handle]');
+	if (nav && handle) {
+		// 恢复上次拖拽位置
+		try {
+			const saved = JSON.parse(localStorage.getItem('nav-pos') ?? 'null') as { x: number; y: number } | null;
+			if (saved) {
+				nav.style.left = `${saved.x}px`;
+				nav.style.top = `${saved.y}px`;
+			}
+		} catch {
+			/* 忽略损坏的存储 */
+		}
+
+		// 点击切换折叠、拖拽移动
+		const setCollapsed = (collapsed: boolean) => {
+			nav.classList.toggle('nav-collapsed', collapsed);
+			try {
+				localStorage.setItem('nav-collapsed', collapsed ? '1' : '0');
+			} catch {
+				/* 忽略 */
+			}
+		};
+		try {
+			if (localStorage.getItem('nav-collapsed') === '1') setCollapsed(true);
+		} catch {
+			/* 忽略 */
+		}
+
+		let dragging = false;
+		let moved = false;
+		let downTarget: EventTarget | null = null;
+		let startX = 0;
+		let startY = 0;
+		let origX = 0;
+		let origY = 0;
+
+		const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max);
+
+		const onDown = (e: PointerEvent) => {
+			// 点击交互元素（导航链接/主题按钮）时不拖拽
+			if ((e.target as HTMLElement).closest('a, button, summary, input')) return;
+			dragging = true;
+			moved = false;
+			downTarget = e.target;
+			startX = e.clientX;
+			startY = e.clientY;
+			const r = nav.getBoundingClientRect();
+			origX = r.left;
+			origY = r.top;
+			nav.classList.add('nav-dragging');
+			handle.setPointerCapture(e.pointerId);
+		};
+		const onMove = (e: PointerEvent) => {
+			if (!dragging) return;
+			const dx = e.clientX - startX;
+			const dy = e.clientY - startY;
+			if (Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true;
+			if (moved) {
+				const w = nav.offsetWidth;
+				const h = nav.offsetHeight;
+				nav.style.left = `${clamp(origX + dx, 0, window.innerWidth - w)}px`;
+				nav.style.top = `${clamp(origY + dy, 0, window.innerHeight - h)}px`;
+			}
+		};
+		const onUp = () => {
+			if (!dragging) return;
+			dragging = false;
+			if (moved) {
+				try {
+					localStorage.setItem('nav-pos', JSON.stringify({ x: parseInt(nav.style.left), y: parseInt(nav.style.top) }));
+				} catch {
+					/* 忽略 */
+				}
+			} else if (downTarget instanceof HTMLElement && downTarget.closest('#nav-toggle')) {
+				// 未拖动且点在头像上 → 点击切换折叠/展开
+				setCollapsed(!nav.classList.contains('nav-collapsed'));
+			}
+			downTarget = null;
+			nav.classList.remove('nav-dragging');
+		};
+
+		handle.addEventListener('pointerdown', onDown);
+		handle.addEventListener('pointermove', onMove);
+		handle.addEventListener('pointerup', onUp);
+		handle.addEventListener('pointercancel', onUp);
+	}
+
+	// 初始化完成，恢复折叠/展开动画
+	document.documentElement.classList.remove('no-nav-anim');
+</script>

@@ -1,0 +1,90 @@
+---
+import { encryptPost, type EncryptedPayload } from '../../lib/encrypt';
+
+interface Props {
+	/** 文章 markdown 正文（不含 frontmatter） */
+	md: string;
+	/** 密码（构建时加密用，不会输出到页面） */
+	password: string;
+}
+
+const { md, password } = Astro.props;
+const payload: EncryptedPayload = await encryptPost(md, password);
+---
+
+<div class="encrypted-post" data-payload={JSON.stringify(payload)}>
+	<!-- 锁定状态 -->
+	<div class="lock-ui text-center py-20 px-6">
+		<p class="text-4xl mb-4">🔒</p>
+		<p class="font-bold text-lg">这篇文章已加密</p>
+		<p class="opacity-60 text-sm mt-1">输入密码解锁阅读</p>
+		<div class="flex gap-2 justify-center mt-6">
+			<input
+				type="password"
+				class="input input-sm input-bordered w-56"
+				placeholder="请输入密码"
+				aria-label="密码"
+			/>
+			<button type="button" class="btn btn-primary btn-sm">解锁</button>
+		</div>
+		<p class="error text-error text-sm mt-3 hidden">密码错误，请重试</p>
+	</div>
+
+	<!-- 解锁后的正文（无额外容器样式，与普通文章一致） -->
+	<div class="content hidden">
+		<div class="prose"></div>
+	</div>
+</div>
+
+<script>
+	const box = document.querySelector<HTMLElement>('.encrypted-post');
+	const input = box?.querySelector<HTMLInputElement>('input[type="password"]');
+	const unlockBtn = box?.querySelector<HTMLButtonElement>('button');
+	const errorEl = box?.querySelector<HTMLElement>('.error');
+	const content = box?.querySelector<HTMLElement>('.content .prose');
+	const payload = JSON.parse(box?.dataset.payload ?? '{}') as {
+		salt: string;
+		iv: string;
+		data: string;
+		iterations: number;
+	};
+
+	const base64ToBytes = (b64: string) =>
+		Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+
+	async function unlock(password: string) {
+		if (!content) return;
+		try {
+			const salt = base64ToBytes(payload.salt);
+			const iv = base64ToBytes(payload.iv);
+			const data = base64ToBytes(payload.data);
+			const baseKey = await crypto.subtle.importKey(
+				'raw',
+				new TextEncoder().encode(password),
+				'PBKDF2',
+				false,
+				['deriveKey'],
+			);
+			const key = await crypto.subtle.deriveKey(
+				{ name: 'PBKDF2', salt, iterations: payload.iterations, hash: 'SHA-256' },
+				baseKey,
+				{ name: 'AES-GCM', length: 256 },
+				false,
+				['decrypt'],
+			);
+			const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data);
+			const html = new TextDecoder().decode(plain);
+			content.innerHTML = html;
+			box?.querySelector('.lock-ui')?.classList.add('hidden');
+			box?.querySelector('.content')?.classList.remove('hidden');
+		} catch {
+			errorEl?.classList.remove('hidden');
+			input?.focus();
+		}
+	}
+
+	unlockBtn?.addEventListener('click', () => unlock(input?.value ?? ''));
+	input?.addEventListener('keydown', (e) => {
+		if ((e as KeyboardEvent).key === 'Enter') unlock(input.value);
+	});
+</script>

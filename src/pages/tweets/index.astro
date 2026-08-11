@@ -1,0 +1,64 @@
+---
+import RadialLayout from '../../layouts/RadialLayout.astro';
+import { buildRings } from '../../lib/circle';
+import { formatDate, sortByDateDesc } from '../../lib/utils';
+import { getCollection } from 'astro:content';
+
+const tweets = sortByDateDesc(await getCollection('tweets'));
+const pad = (n: number) => String(n).padStart(2, '0');
+const monthKey = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+
+const groups = new Map<string, typeof tweets>();
+for (const t of tweets) {
+	const k = monthKey(t.data.date);
+	if (!groups.has(k)) groups.set(k, []);
+	groups.get(k)!.push(t);
+}
+const rings = buildRings({
+	current: 'tweets',
+	core: { title: '推文', subtitle: 'TWEETS' },
+});
+---
+
+<RadialLayout title="推文" description="短内容时间线" rings={rings} core={{ title: '推文', subtitle: 'TWEETS' }}>
+	<header class="mb-6">
+		<h1 class="text-3xl font-bold">推文</h1>
+		<p class="opacity-60 mt-1">一些碎片化的想法 · 按月份归档</p>
+	</header>
+
+	{tweets.length > 0 ? (
+		<div class="space-y-10">
+			{[...groups.entries()].map(([month, list]) => (
+				<section id={`m-${month}`} class="scroll-mt-24">
+					<h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+						<span class="badge badge-soft badge-primary">{month}</span>
+						<span class="text-sm opacity-50">{list.length} 条</span>
+					</h2>
+					<div class="space-y-3">
+						{list.map((tweet) => (
+							<article class="glass rounded-box p-4">
+								<p class="whitespace-pre-wrap break-words text-base leading-relaxed">{tweet.data.content}</p>
+								{tweet.data.source && (
+									<p class="text-xs opacity-50 mt-2">
+										来源：
+										<a class="link link-hover" href={tweet.data.source} target="_blank" rel="noopener">
+											{tweet.data.source}
+										</a>
+									</p>
+								)}
+								<div class="flex flex-wrap gap-2 mt-3">
+									{(tweet.data.images ?? []).map((src) => (
+										<img class="w-44 aspect-[4/3] object-cover rounded-box" src={src} alt="" loading="lazy" />
+									))}
+								</div>
+								<p class="text-xs opacity-50 mt-2">{formatDate(tweet.data.date)}</p>
+							</article>
+						))}
+					</div>
+				</section>
+			))}
+		</div>
+	) : (
+		<p class="opacity-60">还没有推文。</p>
+	)}
+</RadialLayout>

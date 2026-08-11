@@ -1,0 +1,371 @@
+---
+import { Icon } from 'astro-icon/components';
+
+export interface RingNode {
+	/** 标签文字（外层环） */
+	text?: string;
+	/** 图标 id（内层环，如 lucide:home） */
+	icon?: string;
+	/** 跳转链接（可选） */
+	href?: string;
+	/** 角度（度，0°=右，顺时针） */
+	angle: number;
+	/** 当前板块高亮 */
+	active?: boolean;
+}
+
+export interface Ring {
+	radius: number;
+	/** 环厚度（SVG stroke-width） */
+	thickness: number;
+	nodes: RingNode[];
+}
+
+interface Props {
+	rings: Ring[];
+	core: { title: string; subtitle?: string };
+	/** 圆心相对容器左侧的 x（负值 = 圆心在屏幕外，形成左侧裁切延伸） */
+	centerX?: number;
+	/** 圆心相对容器顶部的 y */
+	centerY?: number;
+	/** 进度模式：外圈显示阅读进度弧（由 --ring-progress 驱动，正文页用） */
+	progress?: boolean;
+}
+
+const { rings, core, centerX = -60, centerY = 400, progress = false } = Astro.props;
+const maxR = rings.length ? Math.max(...rings.map((r) => r.radius)) : 0;
+const coreR = 170; // 核心实心圆半径（完整存在，随圆心偏移只露部分）
+const coreX = centerX + coreR * 0.62; // 核心文字置于核心圆可见区中心
+const progressR = Math.max(300, coreR + 130); // 进度环半径
+const pad = Math.max(maxR, coreR, progress ? progressR : 0) + 50; // viewBox 需容纳进度环
+const size = pad * 2;
+const iconR = 38; // 中层图标节点半径（80px 直径的一半）
+
+const toXY = (r: number, deg: number) => {
+	const a = (deg * Math.PI) / 180;
+	return { x: centerX + r * Math.cos(a), y: centerY + r * Math.sin(a) };
+};
+const polar = (r: number, deg: number) => {
+	const a = (deg * Math.PI) / 180;
+	return { x: r * Math.cos(a), y: r * Math.sin(a) };
+};
+---
+
+<div class="circle-stage" style={`--center-x: ${centerX}px; --center-y: ${centerY}px`}>
+	<div class="circle">
+		<!-- SVG：同心圆环 + 连接线 + 核心实心圆 -->
+		<svg
+			class="circle-svg"
+			style={`left: ${centerX - pad}px; top: ${centerY - pad}px; width: ${size}px; height: ${size}px`}
+			viewBox={`${-pad} ${-pad} ${size} ${size}`}
+			aria-hidden="true"
+		>
+			<!-- 环（外层弱、中层透明） -->
+			{rings.map((ring, ri) => (
+				<circle
+					cx="0"
+					cy="0"
+					r={ring.radius}
+					fill="none"
+					stroke-width={ring.thickness}
+					class={ri === 0 ? 'ring-outer' : 'ring-middle'}
+				/>
+			))}
+			<!-- 节点 → 核心的连接线（仅图标节点，星图感） -->
+			{rings.flatMap((ring) => ring.nodes.filter((n) => n.icon)).map((n) => {
+				const from = polar(coreR + 2, n.angle);
+				const to = polar((rings[0]?.radius ?? 360) - iconR, n.angle);
+				return <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} class="node-line" />;
+			})}
+			{/* 进度模式：阅读进度弧（外圈，随滚动增长） */}
+			{progress && (
+				<circle
+					cx="0"
+					cy="0"
+					r={progressR}
+					fill="none"
+					class="ring-progress"
+					stroke-width={14}
+					style={`--ring-r: ${progressR}`}
+				/>
+			)}
+			<!-- 核心实心圆（完整，随偏移露出部分） -->
+			<circle cx="0" cy="0" r={coreR} class="core-fill" />
+		</svg>
+
+		<!-- 核心内容（可点击：折叠/展开外环与中环） -->
+		<div
+			class="core"
+			style={`left: ${coreX}px; top: ${centerY}px; transform: translate(-50%, -50%)`}
+			role="button"
+			tabindex="0"
+			aria-expanded="true"
+			title="点击折叠 / 展开圆环"
+		>
+			{core.subtitle && <p class="core-sub">{core.subtitle}</p>}
+			<p class="core-title">{core.title}</p>
+		</div>
+
+		<!-- 各环节点：图标（node-icon）或标签（node-tag），极坐标定位 -->
+		{rings.map((ring) =>
+			ring.nodes.map((n) => {
+				const pos = toXY(ring.radius, n.angle);
+				const isIcon = !!n.icon;
+				const cls = ['node', isIcon ? 'node-icon' : 'node-tag', n.active ? 'active' : '']
+					.filter(Boolean)
+					.join(' ');
+				const style = `left: ${pos.x}px; top: ${pos.y}px; transform: translate(-50%, -50%)`;
+				const inner = isIcon ? <Icon name={n.icon} class="w-6 h-6" /> : <span class="tag-text">{n.text}</span>;
+				return n.href ? (
+					<a class={cls} style={style} href={n.href} title={n.text}>
+						{inner}
+					</a>
+				) : (
+					<div class={cls} style={style}>
+						{inner}
+					</div>
+				);
+			}),
+		)}
+	</div>
+</div>
+
+<!-- 首屏恢复全局折叠状态（localStorage['circle-collapsed']，切页时无需反复点击） -->
+<script is:inline>
+	try {
+		const stage = document.querySelector('.circle-stage');
+		if (stage && localStorage.getItem('circle-collapsed') === '1') {
+			stage.classList.add('collapsed');
+			stage.querySelector('.core')?.setAttribute('aria-expanded', 'false');
+		}
+	} catch {
+		/* 忽略 */
+	}
+</script>
+
+<style is:global>
+	/* 舞台：裁切容器（圆超出左侧的部分被隐藏），占满视口高度 */
+	.circle-stage {
+		position: relative;
+		overflow: hidden;
+		width: 100%;
+		height: 100vh;
+		pointer-events: none;
+	}
+	.circle {
+		position: absolute;
+		left: 0;
+		top: 0;
+		width: 0;
+		height: 0;
+	}
+	.circle-svg {
+		position: absolute;
+		overflow: visible;
+		pointer-events: none;
+	}
+	/* 环：外圈弱化（0.4）、中圈透明（0.15）——远景→中景→前景分层 */
+	.ring-outer {
+		fill: none;
+		stroke: color-mix(in oklab, var(--color-primary) 26%, var(--color-base-300));
+		opacity: 0.4;
+		stroke-linecap: round;
+	}
+	.ring-middle {
+		fill: none;
+		stroke: color-mix(in oklab, var(--color-primary) 20%, var(--color-base-300));
+		opacity: 0.15;
+		stroke-linecap: round;
+		stroke-dasharray: 3 10;
+	}
+	/* 连接线：核心 → 中层节点（星图连线） */
+	.node-line {
+		stroke: color-mix(in oklab, var(--color-primary) 30%, var(--color-base-300));
+		stroke-width: 1.5;
+		stroke-dasharray: 2 6;
+		opacity: 0.35;
+	}
+	/* 核心实心圆 */
+	.core-fill {
+		fill: var(--color-primary);
+		opacity: 0.95;
+	}
+	/* 核心文字（可见区） */
+	.core {
+		position: absolute;
+		z-index: 3;
+		pointer-events: auto;
+		white-space: nowrap;
+		text-align: center;
+	}
+	.core-title {
+		font-size: 1.3rem;
+		font-weight: 700;
+		color: var(--color-primary-content);
+	}
+	.core-sub {
+		font-size: 0.65rem;
+		letter-spacing: 0.18em;
+		color: var(--color-primary-content);
+		opacity: 0.75;
+		margin-bottom: 0.2rem;
+	}
+	/* 节点 */
+	.node {
+		position: absolute;
+		z-index: 2;
+		pointer-events: auto;
+		white-space: nowrap;
+	}
+	/* 图标节点：悬浮轨道上，外发光 */
+	.node-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 4.5rem;
+		height: 4.5rem;
+		border-radius: 9999px;
+		border: 1px solid var(--glass-border);
+		background: var(--glass-bg-strong);
+		color: var(--color-base-content);
+		box-shadow:
+			inset 0 1px 0 rgb(var(--glass-hi) / 0.35),
+			0 0 30px color-mix(in oklab, var(--color-primary) 18%, transparent),
+			0 8px 24px rgb(0 0 0 / 0.1);
+		transition:
+			transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+			box-shadow 0.3s ease,
+			color 0.3s ease;
+		backdrop-filter: blur(12px) saturate(1.3);
+		-webkit-backdrop-filter: blur(12px) saturate(1.3);
+	}
+	a.node-icon:hover {
+		transform: translate(-50%, -50%) scale(1.12);
+		box-shadow:
+			0 0 40px color-mix(in oklab, var(--color-primary) 35%, transparent),
+			inset 0 0 0 1px var(--color-primary);
+		color: var(--color-primary);
+	}
+	/* 标签节点：知识节点风（弱底、小圆角，文字水平） */
+	.node-tag {
+		border-radius: 8px;
+		padding: 0.3rem 0.9rem;
+		border: 1px solid var(--glass-border);
+		background: color-mix(in oklab, var(--color-base-100) 45%, transparent);
+		color: var(--color-base-content);
+		font-size: 1.02rem;
+		backdrop-filter: blur(6px);
+		-webkit-backdrop-filter: blur(6px);
+	}
+	.tag-text {
+		display: inline-block;
+	}
+	.node-tag.active .tag-text {
+		color: var(--color-primary);
+		font-weight: 600;
+	}
+	a.node-tag:hover .tag-text {
+		color: var(--color-primary);
+	}
+	.node-icon.active {
+		color: var(--color-primary);
+		border-color: color-mix(in oklab, var(--color-primary) 60%, transparent);
+		box-shadow:
+			inset 0 1px 0 rgb(var(--glass-hi) / 0.4),
+			0 0 0 4px color-mix(in oklab, var(--color-primary) 28%, transparent),
+			0 0 36px color-mix(in oklab, var(--color-primary) 30%, transparent);
+		transform: translate(-50%, -50%) scale(1.1);
+	}
+	/* 标签节点：知识节点风（弱底、小圆角，文字始终水平） */
+	.node-tag {
+		border-radius: 8px;
+		padding: 0.3rem 0.9rem;
+		border: 1px solid var(--glass-border);
+		background: color-mix(in oklab, var(--color-base-100) 45%, transparent);
+		color: var(--color-base-content);
+		font-size: 1.02rem;
+		backdrop-filter: blur(6px);
+		-webkit-backdrop-filter: blur(6px);
+	}
+	.tag-text {
+		display: inline-block;
+		transition: transform 0.3s ease;
+	}
+	.node-tag.active .tag-text {
+		color: var(--color-primary);
+		font-weight: 600;
+	}
+	a.node-tag:hover .tag-text {
+		color: var(--color-primary);
+	}
+	/* 环与节点折叠过渡 */
+	.ring-outer,
+	.ring-middle,
+	.node-line {
+		transition: opacity 0.45s ease;
+	}
+	.circle-stage.collapsed .ring-outer,
+	.circle-stage.collapsed .ring-middle,
+	.circle-stage.collapsed .node-line {
+		opacity: 0;
+	}
+	.node {
+		transition:
+			transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
+			opacity 0.35s ease;
+	}
+	/* 折叠：节点向内收缩消失（覆盖内联 transform） */
+	.circle-stage.collapsed .node {
+		opacity: 0;
+		transform: translate(-50%, -50%) scale(0) !important;
+		pointer-events: none;
+	}
+	/* 进度弧：外圈随阅读进度增长（--ring-progress 由布局滚动驱动） */
+	.ring-progress {
+		stroke: var(--color-primary);
+		opacity: 0.5;
+		stroke-linecap: round;
+		stroke-dasharray: calc(2 * 3.14159265 * var(--ring-r) * var(--ring-progress, 0)) 9999;
+		transition:
+			stroke-dasharray 0.15s linear,
+			opacity 0.45s ease;
+	}
+	.circle-stage.collapsed .ring-progress {
+		opacity: 0;
+	}
+	/* 折叠态核心：增强光晕提示 */
+	.circle-stage.collapsed .core-fill {
+		filter: drop-shadow(0 0 24px color-mix(in oklab, var(--color-primary) 45%, transparent));
+	}
+	.core {
+		cursor: pointer;
+	}
+	.core:hover .core-title {
+		text-decoration: underline;
+		text-underline-offset: 3px;
+		text-decoration-color: color-mix(in oklab, var(--color-primary-content) 50%, transparent);
+	}
+</style>
+
+<script>
+	// 点击核心：折叠 / 展开外环与中环（状态全局共享，localStorage 持久化）
+	const stage = document.querySelector<HTMLElement>('.circle-stage');
+	const core = stage?.querySelector('.core');
+	const toggle = () => {
+		const collapsed = stage?.classList.toggle('collapsed') ?? false;
+		core?.setAttribute('aria-expanded', String(!collapsed));
+		try {
+			localStorage.setItem('circle-collapsed', collapsed ? '1' : '0');
+		} catch {
+			/* 忽略 */
+		}
+	};
+	core?.addEventListener('click', toggle);
+	core?.addEventListener('keydown', (e) => {
+		const key = (e as KeyboardEvent).key;
+		if (key === 'Enter' || key === ' ') {
+			e.preventDefault();
+			toggle();
+		}
+	});
+</script>

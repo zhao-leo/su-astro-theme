@@ -1,0 +1,29 @@
+---
+import RadialLayout from '../../layouts/RadialLayout.astro';
+import { buildRings } from '../../lib/circle';
+import { getEntry, render } from 'astro:content';
+
+const about = await getEntry('about', 'index');
+if (!about) throw new Error('缺少内容：src/content/about/index.md');
+const { Content, headings } = await render(about);
+
+const anchors = headings.filter((h) => h.depth === 2);
+const rings = buildRings({
+	current: 'about',
+
+	core: { title: '关于', subtitle: 'ABOUT' },
+});
+---
+
+<RadialLayout title={about.data.title} rings={rings} core={{ title: '关于', subtitle: 'ABOUT' }}>
+	<article class="glass rounded-box">
+		<div class="card-body p-6 sm:p-8">
+			<header class="mb-4">
+				<h1 class="text-3xl font-bold">{about.data.title}</h1>
+			</header>
+			<div class="prose">
+				<Content />
+			</div>
+		</div>
+	</article>
+</RadialLayout>

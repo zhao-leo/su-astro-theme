@@ -1,0 +1,45 @@
+---
+import RadialLayout from '../../layouts/RadialLayout.astro';
+import { buildRings } from '../../lib/circle';
+import { sortById } from '../../lib/utils';
+import { getCollection } from 'astro:content';
+
+const friends = sortById(await getCollection('friends'));
+const rings = buildRings({
+	current: 'friends',
+	core: { title: '友链', subtitle: 'FRIENDS' },
+});
+---
+
+<RadialLayout title="友链" description="朋友们" rings={rings} core={{ title: '友链', subtitle: 'FRIENDS' }}>
+	<header class="mb-6">
+		<h1 class="text-3xl font-bold">友链</h1>
+		<p class="opacity-60 mt-1">交换链接请留言</p>
+	</header>
+
+	{friends.length > 0 ? (
+		<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+			{friends.map((friend) => (
+				<a class="glass rounded-box p-5 flex items-center gap-4 group" href={friend.data.url} target="_blank" rel="noopener">
+					<div class="avatar shrink-0">
+						<div class="w-14 rounded-box">
+							{friend.data.avatar ? (
+								<img src={friend.data.avatar} alt={`${friend.data.name} 的头像`} loading="lazy" />
+							) : (
+								<span class="bg-base-300 flex items-center justify-center text-lg font-bold text-base-content/60">
+									{friend.data.name.slice(0, 1)}
+								</span>
+							)}
+						</div>
+					</div>
+					<div class="min-w-0">
+						<h3 class="font-bold group-hover:text-primary transition-colors">{friend.data.name}</h3>
+						{friend.data.description && <p class="text-sm opacity-70 truncate">{friend.data.description}</p>}
+					</div>
+				</a>
+			))}
+		</div>
+	) : (
+		<p class="opacity-60">还没有友链。</p>
+	)}
+</RadialLayout>

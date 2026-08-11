@@ -1,0 +1,288 @@
+---
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+	album: CollectionEntry<'albums'>;
+}
+
+const { album } = Astro.props;
+const photos = album.data.photos ?? [];
+---
+
+<div class="album-gallery" data-photos={JSON.stringify(photos)}>
+	<!-- 主图预览区 -->
+	<div class="preview glass rounded-box overflow-hidden relative flex items-center justify-center min-h-[60vh]">
+		<img id="main-img" class="max-w-full max-h-[60vh] object-contain" alt="" />
+
+		<!-- 控制按钮 -->
+		<button type="button" class="ctl prev" data-prev aria-label="上一张">‹</button>
+		<button type="button" class="ctl play" data-play aria-label="播放/暂停">▶</button>
+		<button type="button" class="ctl next" data-next aria-label="下一张">›</button>
+		<button type="button" class="ctl fullscreen" data-fullscreen aria-label="全屏">⤢</button>
+		<span class="counter" data-counter>0 / 0</span>
+	</div>
+
+	<!-- EXIF 信息条：平铺在主图下方（无信息时整条隐藏） -->
+	<div class="exif-bar glass rounded-box mt-3 px-4 py-2.5 hidden">
+		<p class="exif-title">EXIF</p>
+		<table class="exif-table">
+			<tbody data-exif></tbody>
+		</table>
+	</div>
+
+	<!-- 缩略图 -->
+	{photos.length > 0 && (
+		<div class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 mt-4">
+			{photos.map((p, i) => (
+				<button type="button" class="thumb" data-thumb={i} aria-label={`查看第 ${i + 1} 张`}>
+					<img class="w-full aspect-[4/3] object-cover rounded-box" src={p.src} alt={p.caption ?? ''} loading="lazy" />
+				</button>
+			))}
+		</div>
+	)}
+</div>
+
+<style>
+	/* 控制按钮 */
+	.ctl {
+		position: absolute;
+		top: 50%;
+		transform: translateY(-50%);
+		width: 2.75rem;
+		height: 2.75rem;
+		border-radius: 9999px;
+		border: 1px solid var(--glass-border);
+		background: var(--glass-bg-strong);
+		color: var(--color-base-content);
+		font-size: 1.3rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		opacity: 0;
+		transition:
+			opacity 0.2s ease,
+			color 0.2s ease,
+			border-color 0.2s ease;
+		z-index: 2;
+	}
+	.preview:hover .ctl {
+		opacity: 1;
+	}
+	.ctl:hover {
+		color: var(--color-primary);
+		border-color: var(--color-primary);
+	}
+	.ctl.prev {
+		left: 0.75rem;
+	}
+	.ctl.next {
+		right: 0.75rem;
+	}
+	.ctl.play {
+		top: auto;
+		transform: none;
+		bottom: 0.75rem;
+		left: 50%;
+		margin-left: -1.375rem;
+	}
+	.ctl.fullscreen {
+		top: auto;
+		transform: none;
+		bottom: 0.75rem;
+		right: 0.75rem;
+		font-size: 1rem;
+	}
+	/* 全屏模式：黑底铺满，主图最大化，控制条常显 */
+	.preview:fullscreen {
+		background: #000;
+		align-items: center;
+		justify-content: center;
+	}
+	.preview:fullscreen #main-img {
+		max-width: 100vw;
+		max-height: 100vh;
+		object-fit: contain;
+	}
+	.preview:fullscreen .ctl {
+		opacity: 1;
+	}
+	/* 计数器 */
+	.counter {
+		position: absolute;
+		top: 0.75rem;
+		left: 50%;
+		transform: translateX(-50%);
+		font-size: 0.75rem;
+		color: var(--color-base-content);
+		background: var(--glass-bg-strong);
+		border: 1px solid var(--glass-border);
+		border-radius: 9999px;
+		padding: 0.15rem 0.7rem;
+		opacity: 0.7;
+	}
+	/* EXIF 条：平铺主图下方，表格展示 */
+	.exif-bar {
+		font-size: 0.78rem;
+	}
+	.exif-title {
+		display: inline-block;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		font-size: 0.68rem;
+		opacity: 0.6;
+		margin-right: 0.75rem;
+	}
+	.exif-table {
+		width: 100%;
+		border-collapse: collapse;
+		margin-top: 0.3rem;
+	}
+	.exif-table td {
+		border: 1px solid var(--glass-border);
+		padding: 0.3rem 0.8rem;
+		white-space: nowrap;
+	}
+	.exif-table td:first-child {
+		opacity: 0.55;
+		width: 1%;
+	}
+	.exif-table td:last-child {
+		font-weight: 600;
+	}
+	.exif-table tr:nth-child(even) td {
+		background: color-mix(in oklab, var(--color-base-200) 35%, transparent);
+	}
+	/* 缩略图 */
+	.thumb {
+		border-radius: var(--radius-box);
+		overflow: hidden;
+		border: 2px solid transparent;
+		transition: border-color 0.15s ease;
+	}
+	.thumb.active {
+		border-color: var(--color-primary);
+	}
+	.thumb img {
+		transition: transform 0.3s ease;
+	}
+	.thumb:hover img {
+		transform: scale(1.08);
+	}
+</style>
+
+<script>
+	import exifr from 'exifr';
+
+	type Photo = { src: string; caption?: string };
+
+	const root = document.querySelector<HTMLElement>('.album-gallery')!;
+	if (!root) throw new Error('缺少 .album-gallery');
+	const photos = JSON.parse(root.dataset.photos ?? '[]') as Photo[];
+	const mainImg = document.getElementById('main-img') as HTMLImageElement;
+	const counter = root.querySelector<HTMLElement>('[data-counter]');
+	const exifList = root.querySelector<HTMLElement>('[data-exif]');
+	const exifBar = root.querySelector<HTMLElement>('.exif-bar');
+
+	let current = 0;
+	let timer: number | null = null;
+	let playing = false;
+
+	const playBtn = root.querySelector<HTMLButtonElement>('[data-play]');
+	const fsBtn = root.querySelector<HTMLButtonElement>('[data-fullscreen]');
+	const previewEl = root.querySelector<HTMLElement>('.preview')!;
+
+	function setImage(i: number) {
+		current = ((i % photos.length) + photos.length) % photos.length;
+		const p = photos[current];
+		mainImg.src = p.src;
+		mainImg.alt = p.caption ?? '';
+		if (counter) counter.textContent = `${current + 1} / ${photos.length}`;
+		root.querySelectorAll('.thumb').forEach((t, k) => t.classList.toggle('active', k === current));
+		loadExif();
+	}
+
+	// ---------- EXIF：从图片提取，只展示存在的字段 ----------
+	async function loadExif() {
+		const img = mainImg;
+		const rows: [string, string][] = [];
+		try {
+			const ex = await exifr.parse(img.src, {
+				pick: ['Make', 'Model', 'LensModel', 'FNumber', 'ExposureTime', 'ISO', 'FocalLength', 'DateTimeOriginal', 'Software'],
+			});
+			if (ex) {
+				if (ex.Make || ex.Model) rows.push(['相机', [ex.Make, ex.Model].filter(Boolean).join(' ')]);
+				if (ex.LensModel) rows.push(['镜头', ex.LensModel]);
+				if (ex.FNumber) rows.push(['光圈', `f/${ex.FNumber}`]);
+				if (ex.ExposureTime) rows.push(['快门', formatShutter(ex.ExposureTime)]);
+				if (ex.ISO) rows.push(['ISO', String(ex.ISO)]);
+				if (ex.FocalLength) rows.push(['焦距', `${ex.FocalLength}mm`]);
+				if (ex.DateTimeOriginal) rows.push(['拍摄时间', formatDT(ex.DateTimeOriginal)]);
+				if (ex.Software) rows.push(['软件', ex.Software]);
+			}
+		} catch {
+			/* 解析失败忽略 */
+		}
+		// 尺寸：始终从自然尺寸获取（无 EXIF 也有）
+		if (img.naturalWidth) rows.push(['尺寸', `${img.naturalWidth} × ${img.naturalHeight}`]);
+		renderExif(rows);
+	}
+
+	function formatShutter(t: number): string {
+		if (!t) return String(t);
+		return t >= 1 ? `${t}s` : `1/${Math.round(1 / t)}s`;
+	}
+	function formatDT(d: Date): string {
+		try {
+			return new Intl.DateTimeFormat('zh-CN', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(d));
+		} catch {
+			return String(d);
+		}
+	}
+
+	function renderExif(rows: [string, string][]) {
+		if (!exifList || !exifBar) return;
+		if (rows.length === 0) {
+			exifBar.classList.add('hidden');
+			exifList.innerHTML = '';
+			return;
+		}
+		exifBar.classList.remove('hidden');
+		exifList.innerHTML = rows
+			.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`)
+			.join('');
+	}
+
+	// ---------- 事件 ----------
+	root.querySelectorAll<HTMLButtonElement>('[data-thumb]').forEach((btn) => {
+		btn.addEventListener('click', () => setImage(Number(btn.dataset.thumb)));
+	});
+	root.querySelector('[data-prev]')?.addEventListener('click', () => setImage(current - 1));
+	root.querySelector('[data-next]')?.addEventListener('click', () => setImage(current + 1));
+
+	const togglePlay = () => {
+		playing = !playing;
+		if (playBtn) playBtn.textContent = playing ? '⏸' : '▶';
+		if (playing) {
+			timer = window.setInterval(() => setImage(current + 1), 3000);
+		} else if (timer) {
+			clearInterval(timer);
+			timer = null;
+		}
+	};
+	playBtn?.addEventListener('click', togglePlay);
+
+	// 全屏（Fullscreen API）
+	const toggleFullscreen = () => {
+		if (document.fullscreenElement) void document.exitFullscreen();
+		else void previewEl.requestFullscreen();
+	};
+	fsBtn?.addEventListener('click', toggleFullscreen);
+	document.addEventListener('fullscreenchange', () => {
+		if (fsBtn) fsBtn.textContent = document.fullscreenElement ? '⛶' : '⤢';
+	});
+	mainImg.addEventListener('load', () => loadExif());
+
+	// 初始化
+	if (photos.length > 0) setImage(0);
+</script>

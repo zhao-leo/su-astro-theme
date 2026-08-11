@@ -1,0 +1,293 @@
+/* ============================================================
+   Tailwind CSS 4 + daisyUI 5
+   默认双主题：nord（默认）/ business（prefers-dark）
+   ============================================================ */
+@import "tailwindcss";
+
+@theme {
+	/* 无衬线（UI 部件）：全站统一霞鹜文楷 */
+	--font-sans:
+		'LXGW WenKai', 'Kaiti SC', 'STKaiti', 'KaiTi', system-ui, -apple-system, 'Segoe UI',
+		'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+	/* 衬线（正文）：全站统一霞鹜文楷 */
+	--font-serif:
+		'LXGW WenKai', 'Kaiti SC', 'STKaiti', 'KaiTi', Georgia, 'Times New Roman', 'Songti SC',
+		'Noto Serif SC', 'Source Han Serif SC', 'SimSun', serif;
+	--font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+	/* 全局默认 = 衬线，正文阅读体验 */
+	--default-font-family: var(--font-serif);
+}
+
+@plugin "daisyui" {
+	themes: nord --default, business --prefersdark;
+}
+
+/* ============================================================
+   字体：正文默认衬线；UI 部件（导航/按钮/徽章/标题/页脚）无衬线
+   ============================================================ */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.navbar,
+.btn,
+.badge,
+.menu,
+.footer,
+.card-title,
+.link {
+	font-family: var(--font-sans);
+}
+
+/* 文章内的标题跟随正文使用衬线（阅读连续性） */
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+	font-family: var(--font-serif);
+}
+
+/* ============================================================
+   正文排版（markdown 渲染区 .prose）
+   ============================================================ */
+.prose {
+	line-height: 1.8;
+	font-size: 1rem;
+	color: var(--color-base-content);
+}
+
+.prose > :first-child {
+	margin-top: 0;
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4 {
+	font-weight: 700;
+	line-height: 1.35;
+	margin: 1.6em 0 0.6em;
+}
+
+.prose h1 {
+	font-size: 1.7em;
+}
+
+.prose h2 {
+	font-size: 1.4em;
+	padding-bottom: 0.35em;
+	border-bottom: 1px solid var(--color-base-300);
+}
+
+.prose h3 {
+	font-size: 1.15em;
+}
+
+.prose p {
+	margin: 0 0 1em;
+}
+
+.prose a {
+	text-decoration: underline;
+	text-underline-offset: 3px;
+	color: var(--color-primary);
+}
+
+.prose img {
+	max-width: 100%;
+	border-radius: var(--radius-box);
+	margin: 1.2em auto;
+}
+
+.prose code {
+	font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+	font-size: 0.88em;
+	background: var(--color-base-200);
+	border: 1px solid var(--color-base-300);
+	border-radius: 0.35em;
+	padding: 0.15em 0.4em;
+}
+
+.prose pre {
+	background: var(--color-base-200);
+	border: 1px solid var(--color-base-300);
+	border-radius: var(--radius-box);
+	padding: 1em;
+	overflow-x: auto;
+	margin: 1.2em 0;
+}
+
+.prose pre code {
+	background: none;
+	border: none;
+	padding: 0;
+	font-size: 0.9em;
+}
+
+.prose blockquote {
+	margin: 1.2em 0;
+	padding: 0.4em 1.2em;
+	border-left: 3px solid var(--color-primary);
+	background: var(--color-base-200);
+	border-radius: 0 var(--radius-box) var(--radius-box) 0;
+	color: var(--color-base-content);
+	opacity: 0.85;
+}
+
+.prose ul,
+.prose ol {
+	padding-left: 1.4em;
+	margin: 0 0 1em;
+}
+
+.prose li {
+	margin: 0.3em 0;
+}
+
+.prose table {
+	width: 100%;
+	border-collapse: collapse;
+	margin: 1.2em 0;
+	font-size: 0.95em;
+}
+
+.prose th,
+.prose td {
+	border: 1px solid var(--color-base-300);
+	padding: 0.5em 0.8em;
+	text-align: left;
+}
+
+.prose th {
+	background: var(--color-base-200);
+}
+
+.prose hr {
+	border: none;
+	border-top: 1px solid var(--color-base-300);
+	margin: 2em 0;
+}
+
+/* 代码块行号 / 高亮等（shiki）继承默认即可 */
+
+/* ============================================================
+   代码块复制按钮
+   ============================================================ */
+.astro-code {
+	position: relative;
+}
+.code-copy-btn {
+	position: absolute;
+	top: 0.5rem;
+	right: 0.5rem;
+	z-index: 1;
+	opacity: 0;
+	transition: opacity 0.2s ease;
+	background: var(--color-base-100);
+	color: var(--color-base-content);
+	border: 1px solid var(--color-base-300);
+	border-radius: var(--radius-field);
+	padding: 0.3rem;
+	line-height: 0;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.astro-code:hover .code-copy-btn,
+.code-copy-btn:focus-visible {
+	opacity: 1;
+}
+.code-copy-btn.code-copy-done {
+	opacity: 1;
+	border-color: var(--color-success);
+	color: var(--color-success);
+}
+
+/* ============================================================
+   代码高亮跟随主题（shiki 双主题：浅色值内联，深色值在
+   --shiki-dark / --shiki-dark-bg 变量中，由 data-theme-mode 切换）
+   ============================================================ */
+[data-theme-mode='dark'] .astro-code span {
+	color: var(--shiki-dark) !important;
+}
+
+[data-theme-mode='dark'] .astro-code {
+	color: var(--shiki-dark) !important;
+	background-color: var(--shiki-dark-bg) !important;
+}
+
+/* ============================================================
+   Liquid Glass：玻璃质感规范
+   - .glass：面层玻璃（卡片通用）
+   - 双主题自动适配：颜色由 daisyUI 语义色 color-mix 而来
+   ============================================================ */
+:root {
+	--glass-blur: 14px;
+	--glass-saturate: 1.35;
+	--glass-bg: color-mix(in oklab, var(--color-base-100) 66%, transparent);
+	--glass-bg-strong: color-mix(in oklab, var(--color-base-100) 82%, transparent);
+	--glass-border: color-mix(in oklab, var(--color-base-300) 60%, transparent);
+	--glass-hi: 255 255 255; /* 高光色（浅色：冷白） */
+	--glass-shadow: 0 8px 28px rgb(0 0 0 / 0.07);
+}
+/* 深色主题玻璃变量 */
+[data-theme='business'] {
+	--glass-hi: 226 232 240; /* 高光色（深色：冷白灰） */
+	--glass-bg: color-mix(in oklab, var(--color-base-100) 56%, transparent);
+	--glass-bg-strong: color-mix(in oklab, var(--color-base-100) 76%, transparent);
+}
+
+.glass,
+.glass-strong {
+	position: relative;
+	backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+	-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+	border: 1px solid var(--glass-border);
+	box-shadow:
+		inset 0 1px 0 rgb(var(--glass-hi) / 0.32),
+		inset 0 -1px 0 rgb(0 0 0 / 0.05),
+		var(--glass-shadow);
+}
+.glass {
+	background: var(--glass-bg);
+}
+.glass-strong {
+	background: var(--glass-bg-strong);
+}
+/* 不支持 backdrop-filter 时降级为实色底 */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+	.glass {
+		background: var(--color-base-100);
+	}
+	.glass-strong {
+		background: var(--color-base-100);
+	}
+}
+
+/* ============================================================
+   背景弱纹理：为玻璃提供可模糊的内容（细点阵，双主题自适应）
+   ============================================================ */
+body {
+	background-image:
+		radial-gradient(rgb(var(--glass-hi) / 0.035) 1px, transparent 1px),
+		radial-gradient(rgb(0 0 0 / 0.02) 1px, transparent 1px);
+	background-size: 26px 26px;
+	background-position: 0 0, 13px 13px;
+}
+
+/* ============================================================
+   圆环折叠联动：折叠后左侧区域收缩，右侧内容区自动向左扩展
+   左侧环为固定像素宽度，右侧 = 页面总宽 - 环宽（flex-1，无百分比）
+   ============================================================ */
+.circle-wrap {
+	width: 400px;
+	transition: width 0.45s ease;
+}
+.circle-wrap:has(.circle-stage.collapsed) {
+	width: 160px;
+}

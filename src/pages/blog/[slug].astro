@@ -1,0 +1,71 @@
+---
+import RadialLayout from '../../layouts/RadialLayout.astro';
+import EncryptedPost from '../../components/post/EncryptedPost.astro';
+import { getPosts } from '../../lib/posts';
+import { formatDate } from '../../lib/utils';
+import { render } from 'astro:content';
+
+export async function getStaticPaths() {
+	const posts = await getPosts();
+	return posts.map((post, i) => ({
+		params: { slug: post.id },
+		props: { post, newer: posts[i - 1], older: posts[i + 1] },
+	}));
+}
+
+const { post, newer, older } = Astro.props;
+const { Content } = await render(post);
+---
+
+<RadialLayout
+	title={post.data.title}
+	description={post.data.description}
+	rings={[]}
+	core={{ title: '博客', subtitle: 'BLOG' }}
+	progress
+>
+	<article class="glass rounded-box">
+		<div class="card-body p-8">
+			<header class="mb-6">
+				<a class="link link-hover text-sm opacity-60" href="/blog/">← 返回博客列表</a>
+				<h1 class="text-3xl font-bold mt-2">{post.data.title}</h1>
+				<div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm opacity-60 mt-2">
+					<time datetime={post.data.date.toISOString()}>{formatDate(post.data.date)}</time>
+					{post.data.tags.map((tag) => (
+						<a class="badge badge-soft badge-primary badge-sm no-underline" href={`/blog/tag/${tag}/`}>
+							#{tag}
+						</a>
+					))}
+				</div>
+			</header>
+
+			{post.data.password ? (
+				<EncryptedPost md={post.body ?? ''} password={post.data.password} />
+			) : (
+				<div class="prose">
+					<Content />
+				</div>
+			)}
+
+			{/* 上一篇 / 下一篇 */}
+			<nav class="flex items-center justify-between gap-4 mt-10 pt-6 border-t border-base-300">
+				{newer ? (
+					<a class="btn btn-sm min-w-0" href={`/blog/${newer.id}/`}>
+						<span class="text-base-content/50 shrink-0">←</span>
+						<span class="truncate">{newer.data.title}</span>
+					</a>
+				) : (
+					<span />
+				)}
+				{older ? (
+					<a class="btn btn-sm min-w-0" href={`/blog/${older.id}/`}>
+						<span class="truncate">{older.data.title}</span>
+						<span class="text-base-content/50 shrink-0">→</span>
+					</a>
+				) : (
+					<span />
+				)}
+			</nav>
+		</div>
+	</article>
+</RadialLayout>

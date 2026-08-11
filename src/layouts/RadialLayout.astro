@@ -1,0 +1,63 @@
+---
+import Head from '../components/layout/Head.astro';
+import Nav from '../components/layout/Nav.astro';
+import RadialCircle, { type Ring } from '../components/radial/RadialCircle.astro';
+import { getSite } from '../lib/site';
+import '../styles/global.css';
+
+interface Props {
+	title?: string;
+	description?: string;
+	rings: Ring[];
+	core: { title: string; subtitle?: string };
+	centerX?: number;
+	centerY?: number;
+	/** 阅读进度模式：外圈进度弧随右侧滚动增长 */
+	progress?: boolean;
+}
+
+const { rings, core, centerX = -60, centerY = 400, title, description, progress = false } = Astro.props;
+const site = await getSite();
+---
+
+<!doctype html>
+<html lang={site.language}>
+	<Head title={title} description={description} />
+	<body class="min-h-screen">
+		<Nav />
+		<main class="flex h-screen overflow-hidden">
+			{/* 左：多层同心圆（圆心在左侧屏幕外，形成延伸裁切）；折叠时自动收缩 */}
+			<div class="circle-wrap shrink-0 h-full">
+				<RadialCircle rings={rings} core={core} centerX={centerX} centerY={centerY} progress={progress} />
+			</div>
+
+			{/* 右：内容区（占满高度，内容超出内部滚动；progress 时驱动阅读进度弧） */}
+			<section id={progress ? 'radial-scroll' : undefined} class="flex-1 h-full overflow-y-auto p-8">
+				<slot />
+			</section>
+		</main>
+	</body>
+</html>
+
+<script>
+	// 阅读进度：右侧滚动 → 外圈进度弧（--ring-progress 0~1）
+	const scroller = document.getElementById('radial-scroll');
+	const stage = document.querySelector<HTMLElement>('.circle-stage');
+	if (scroller && stage) {
+		let ticking = false;
+		scroller.addEventListener(
+			'scroll',
+			() => {
+				if (ticking) return;
+				ticking = true;
+				requestAnimationFrame(() => {
+					const max = scroller.scrollHeight - scroller.clientHeight;
+					const ratio = max > 0 ? scroller.scrollTop / max : 0;
+					stage.style.setProperty('--ring-progress', ratio.toFixed(4));
+					ticking = false;
+				});
+			},
+			{ passive: true },
+		);
+	}
+</script>

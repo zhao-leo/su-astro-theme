@@ -1,0 +1,35 @@
+---
+import RadialLayout from '../../layouts/RadialLayout.astro';
+import AlbumGallery from '../../components/album/AlbumGallery.astro';
+import { buildRings } from '../../lib/circle';
+import { formatDate } from '../../lib/utils';
+import { getCollection } from 'astro:content';
+
+export async function getStaticPaths() {
+	const albums = await getCollection('albums');
+	return albums.map((album) => ({ params: { slug: album.id }, props: { album } }));
+}
+
+const { album } = Astro.props;
+const rings = buildRings({ current: 'albums', core: { title: album.data.title } });
+const count = (album.data.photos ?? []).length;
+---
+
+<RadialLayout
+	title={album.data.title}
+	description={album.data.description}
+	rings={rings}
+	core={{ title: album.data.title, subtitle: 'ALBUM' }}
+>
+	<header class="mb-6">
+		<a class="link link-hover text-sm opacity-60" href="/albums/">← 返回相册列表</a>
+		<h1 class="text-3xl font-bold mt-2">{album.data.title}</h1>
+		<p class="opacity-60 mt-1 flex flex-wrap gap-x-2">
+			<span>{count} 张照片</span>
+			{album.data.location && <span>· {album.data.location}</span>}
+			<span>· {formatDate(album.data.date)}</span>
+		</p>
+	</header>
+
+	<AlbumGallery album={album} />
+</RadialLayout>
