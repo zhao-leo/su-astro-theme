@@ -52,6 +52,8 @@ const su = defineCollection({
 			.optional(),
 		seo: z
 			.object({
+				/** 站点 favicon：相对路径（如 /favicon.png）或绝对 URL 均可 */
+				favicon: z.string().optional(),
 				ogImage: z.string().optional(),
 				twitter: z.string().optional(),
 			})
