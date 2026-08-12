@@ -1,12 +1,22 @@
 import { getCollection } from 'astro:content';
 
-/** 全部文章：按置顶 + 日期降序 */
-export async function getPosts() {
-	const posts = await getCollection('blogs');
+/** 排序：置顶 + 日期降序 */
+function sortPosts<T extends { data: { pinned?: boolean; date: Date } }>(posts: T[]): T[] {
 	return posts.sort((a, b) => {
 		if (a.data.pinned !== b.data.pinned) return a.data.pinned ? -1 : 1;
 		return b.data.date.getTime() - a.data.date.getTime();
 	});
+}
+
+/** 全部文章（含加密）：详情页路由生成、前后篇跳转用 */
+export async function getPostsAll() {
+	return sortPosts(await getCollection('blogs'));
+}
+
+/** 索引文章：排除加密（不参加列表/tag/RSS 索引） */
+export async function getPosts() {
+	const posts = await getCollection('blogs', ({ data }) => !data.password);
+	return sortPosts(posts);
 }
 
 /** 标签及其文章数（按出现次数降序） */

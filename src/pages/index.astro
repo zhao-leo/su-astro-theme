@@ -50,8 +50,31 @@ const jsonLd = {
 				</a>
 			))}
 		</div>
+
+		{/* 订阅与站点地图：与上方社交链接用分隔线区分 */}
+		<div class="divider my-5 text-xs opacity-50">订阅与站点</div>
+		<div class="flex flex-wrap gap-2">
+			<a class="btn btn-sm btn-ghost" href="/rss.xml">
+				<Icon name="simple-icons:rss" class="w-4 h-4" />
+				博客 RSS
+			</a>
+			<a class="btn btn-sm btn-ghost" href="/rss-albums.xml">
+				<Icon name="simple-icons:rss" class="w-4 h-4" />
+				相册 RSS
+			</a>
+			<a class="btn btn-sm btn-ghost" href="/rss-tweets.xml">
+				<Icon name="simple-icons:rss" class="w-4 h-4" />
+				推文 RSS
+			</a>
+			<a class="btn btn-sm btn-ghost" href="/sitemap-index.xml">
+				<Icon name="lucide:map" class="w-4 h-4" />
+				Sitemap
+			</a>
+		</div>
+		{/* 订阅区与 ICP 信息区：分隔线区分 */}
+		<div class="divider my-5 text-xs opacity-50"></div>
 		{site.footer?.icp && (
-			<p class="text-sm opacity-50 mt-6">
+			<p class="text-sm opacity-50">
 				<a class="link link-hover" href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">
 					{site.footer.icp}
 				</a>

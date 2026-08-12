@@ -1,5 +1,5 @@
 // @ts-check
-import { cpSync, rmSync, watch } from 'node:fs';
+import { cpSync, rmSync, watch, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { defineConfig } from 'astro/config';
@@ -10,6 +10,12 @@ import * as toml from 'smol-toml';
 
 // site 从 src/content/su.toml 读取（内容侧唯一配置源）
 const su = toml.parse(readFileSync('./src/content/su.toml', 'utf-8'));
+
+// 加密文章 slug 列表（sitemap 排除用）：扫描 src/content/blogs/*.md 的 frontmatter 中 password 字段
+const encryptedSlugs = readdirSync('./src/content/blogs')
+	.filter((f) => f.endsWith('.md'))
+	.filter((f) => /^---\s*[\s\S]*?^password\s*[:=]\s*.+/m.test(readFileSync(`./src/content/blogs/${f}`, 'utf-8')))
+	.map((f) => f.replace(/\.md$/, ''));
 
 // —— public 目录合并 ——
 // 顶层 public/ 与 src/content/public/（内容仓库侧）合并到 .astro/merged-public，
@@ -36,8 +42,8 @@ export default defineConfig({
 	site: typeof su.site === 'string' ? su.site : undefined,
 	integrations: [
 		sitemap({
-			// 只收录 HTML 页面，排除 rss.xml 等资源路由
-			filter: (page) => !page.endsWith('.xml'),
+			// 只收录 HTML 页面，排除 rss.xml 等资源路由与加密文章页
+			filter: (page) => !page.endsWith('.xml') && !encryptedSlugs.some((s) => page.endsWith(`/blog/${encodeURIComponent(s)}/`)),
 		}),
 		icon(),
 	],
