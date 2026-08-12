@@ -2,6 +2,8 @@
 import { SEO } from 'astro-seo';
 import { getSite } from '../../lib/site';
 import { absoluteUrl } from '../../lib/seo';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 
 interface Props {
 	title?: string;
@@ -46,7 +48,21 @@ function faviconType(path?: string): string {
 	}
 }
 
-const faviconUrl = absoluteUrl(site.seo?.favicon) ?? '/favicon.png';
+const faviconUrl = absoluteUrl(site.favicon) ?? '/favicon.png';
+
+/** 分析工具注入：src/content/analysis/<name>.html（不存在或名字非法则跳过） */
+const analysisHtml = (site.analysis ?? [])
+	.filter((name) => /^[\w-]+$/.test(name))
+	.map((name) => {
+		const file = path.join(process.cwd(), 'src', 'content', 'analysis', `${name}.html`);
+		try {
+			return readFileSync(file, 'utf-8');
+		} catch {
+			return '';
+		}
+	})
+	.filter(Boolean)
+	.join('\n');
 const pageTitle = title ?? site.title;
 const pageDescription = description ?? site.description;
 const canonicalUrl = canonical ? new URL(canonical, Astro.site).href : Astro.url.href;
@@ -72,7 +88,9 @@ const openGraph = ogImage
 <head>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
-	<link rel="icon" type={faviconType(site.seo?.favicon)} href={faviconUrl} />
+	<link rel="icon" type={faviconType(site.favicon)} href={faviconUrl} />
+	{/* 分析工具注入（构建时读取 src/content/analysis/<name>.html，缺失自动跳过） */}
+	{analysisHtml && <Fragment set:html={analysisHtml} />}
 	<link rel="alternate" type="application/rss+xml" title="博客订阅" href="/rss.xml" />
 	<link rel="alternate" type="application/rss+xml" title="相册订阅" href="/rss-albums.xml" />
 	<link rel="alternate" type="application/rss+xml" title="推文订阅" href="/rss-tweets.xml" />

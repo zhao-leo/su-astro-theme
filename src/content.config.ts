@@ -52,12 +52,14 @@ const su = defineCollection({
 			.optional(),
 		seo: z
 			.object({
-				/** 站点 favicon：相对路径（如 /favicon.png）或绝对 URL 均可 */
-				favicon: z.string().optional(),
 				ogImage: z.string().optional(),
 				twitter: z.string().optional(),
 			})
 			.optional(),
+		/** 分析工具列表：名称对应 src/content/analysis/<name>.html，构建时注入 <head>（缺失自动跳过） */
+		analysis: z.array(z.string()).default([]),
+		/** 站点 favicon：相对路径（如 /favicon.png）或绝对 URL 均可 */
+		favicon: z.string().optional(),
 	}),
 });
 
