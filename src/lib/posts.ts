@@ -8,15 +8,9 @@ function sortPosts<T extends { data: { pinned?: boolean; date: Date } }>(posts: 
 	});
 }
 
-/** 全部文章（含加密）：详情页路由生成、前后篇跳转用 */
-export async function getPostsAll() {
-	return sortPosts(await getCollection('blogs'));
-}
-
-/** 索引文章：排除加密（不参加列表/tag/RSS 索引） */
+/** 全部文章：置顶 + 日期降序（列表/tag/详情页均显示，含加密文章） */
 export async function getPosts() {
-	const posts = await getCollection('blogs', ({ data }) => !data.password);
-	return sortPosts(posts);
+	return sortPosts(await getCollection('blogs'));
 }
 
 /** 标签及其文章数（按出现次数降序） */

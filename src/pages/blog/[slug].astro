@@ -1,13 +1,12 @@
 ---
 import RadialLayout from '../../layouts/RadialLayout.astro';
 import EncryptedPost from '../../components/post/EncryptedPost.astro';
-import { getPostsAll } from '../../lib/posts';
+import { getPosts } from '../../lib/posts';
 import { formatDate } from '../../lib/utils';
 import { render } from 'astro:content';
 
 export async function getStaticPaths() {
-	// 路由生成包含加密文章（URL 直达可访问），但列表索引（getPosts）会排除
-	const posts = await getPostsAll();
+	const posts = await getPosts();
 	return posts.map((post, i) => ({
 		params: { slug: post.id },
 		props: { post, newer: posts[i - 1], older: posts[i + 1] },
