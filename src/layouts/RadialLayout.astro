@@ -40,7 +40,7 @@ const site = await getSite();
 </html>
 
 <script>
-	// 阅读进度：右侧滚动 → 外圈进度弧（--ring-progress 0~1）
+	// 阅读进度：右侧滚动 → 外圈进度弧
 	const scroller = document.getElementById('radial-scroll');
 	const stage = document.querySelector<HTMLElement>('.circle-stage');
 	if (scroller && stage) {
@@ -54,10 +54,18 @@ const site = await getSite();
 					const max = scroller.scrollHeight - scroller.clientHeight;
 					const ratio = max > 0 ? scroller.scrollTop / max : 0;
 					stage.style.setProperty('--ring-progress', ratio.toFixed(4));
+					// Firefox 不支持 calc() 乘法用于 stroke-dasharray，改为 JS 直接算弧长
+					const prog = stage.querySelector<SVGCircleElement>('.ring-progress');
+					if (prog) {
+						const r = parseFloat(prog.style.getPropertyValue('--ring-r')) || 0;
+						prog.style.strokeDasharray = `${2 * Math.PI * r * ratio} 9999`;
+					}
 					ticking = false;
 				});
 			},
 			{ passive: true },
 		);
+		// 首帧：初始进度（无滚动事件时也设置）
+		scroller.dispatchEvent(new Event('scroll'));
 	}
 </script>

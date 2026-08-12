@@ -46,27 +46,27 @@ const rings = buildRings({
 								<h3 class="font-bold leading-snug group-hover:text-primary transition-colors">
 									{album.data.title}
 								</h3>
-								<p class="text-sm opacity-60 mt-2 flex flex-wrap gap-x-2">
-									<span>{photos.length} 张</span>
-									{album.data.location && <span>· {album.data.location}</span>}
+								<p class="text-sm opacity-60 mt-2 space-y-0.5">
+									<span class="block">{photos.length} 张</span>
+									{album.data.location && <span class="block">{album.data.location}</span>}
 								</p>
 								<p class="text-xs opacity-40 mt-1">{formatDate(album.data.date)}</p>
 							</div>
-
-							{/* 横向扩展区：hover 时展开显示相册内更多照片 */}
-							{extra.length > 0 && (
-								<div class="extend hidden sm:flex items-stretch w-0 group-hover:w-40 transition-all duration-300 overflow-hidden shrink-0">
-									{extra.map((ph) => (
-										<img
-											class="w-20 h-full object-cover shrink-0"
-											src={ph.src}
-											alt=""
-											loading="lazy"
-										/>
-									))}
-								</div>
-							)}
 						</div>
+
+						{/* 覆盖层：hover 从左侧滑入，直接盖在封面图上（绝对定位不占布局，卡片尺寸不变） */}
+						{extra.length > 0 && (
+							<div class="extend absolute left-0 top-0 bottom-0 w-44 sm:w-52 flex -translate-x-full group-hover:translate-x-0 transition-transform duration-300 overflow-hidden">
+								{extra.map((ph) => (
+									<img
+										class="w-1/2 h-full object-cover shrink-0"
+										src={ph.src}
+										alt=""
+										loading="lazy"
+									/>
+								))}
+							</div>
+						)}
 					</a>
 				);
 			})}
