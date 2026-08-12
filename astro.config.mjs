@@ -1,5 +1,5 @@
 // @ts-check
-import { cpSync, rmSync, watch, readdirSync } from 'node:fs';
+import { cpSync, rmSync, watch, readdirSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { defineConfig } from 'astro/config';
@@ -26,8 +26,9 @@ const contentPublic = fileURLToPath(new URL('./src/content/public', import.meta.
 
 function syncPublic() {
 	rmSync(mergedPublic, { recursive: true, force: true });
-	cpSync(topPublic, mergedPublic, { recursive: true });
-	cpSync(contentPublic, mergedPublic, { recursive: true });
+	// 两个来源目录都可能缺失，缺失时跳过（不影响构建）
+	if (existsSync(topPublic)) cpSync(topPublic, mergedPublic, { recursive: true });
+	if (existsSync(contentPublic)) cpSync(contentPublic, mergedPublic, { recursive: true });
 }
 syncPublic();
 
