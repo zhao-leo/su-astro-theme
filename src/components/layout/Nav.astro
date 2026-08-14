@@ -7,12 +7,11 @@ const profile = site.profile;
 const total = site.nav.length + 1; // 导航项 + 主题切换
 ---
 
-<header id="site-nav" class="fixed z-20 select-none" style="left: 24px; top: 24px">
+<header id="site-nav" class="fixed z-20 select-none">
 	<!-- 头像：组件中心，可按住拖拽 -->
 	<div
 		id="nav-toggle"
-		class="relative w-12 h-12 cursor-grab active:cursor-grabbing"
-		data-drag-handle
+		class="relative w-12 h-12"
 		title={site.title}
 		aria-label="导航"
 	>
@@ -96,6 +95,9 @@ const total = site.nav.length + 1; // 导航项 + 主题切换
 
 <style>
 	#site-nav {
+		/* 锁定在右上区域（不贴边，留出展开空间：圆心距右/顶 ~120px > 环外缘 92px） */
+		right: 96px;
+		top: 96px;
 		--r: 64px; /* 圆形排列半径 */
 	}
 	@media (max-width: 640px) {
@@ -103,26 +105,17 @@ const total = site.nav.length + 1; // 导航项 + 主题切换
 			--r: 50px;
 		}
 	}
-	/* 默认隐藏底部导航条（非竖屏） */
+	/* 默认隐藏底部导航条 */
 	#mobile-bar {
 		display: none;
 	}
-	/* 竖屏/窄高视口（手机竖屏）：隐藏圆形菜单，改用底部导航条（#mobile-bar） */
-	@media (max-aspect-ratio: 1 / 1) {
+	/* 手机（≤1024px，不允许横屏布局）或窄高视口：隐藏圆形菜单，显示底部导航条 */
+	@media (max-width: 1024px), (max-aspect-ratio: 1 / 1) {
 		#site-nav {
 			display: none !important;
 		}
 		#mobile-bar {
 			display: block;
-		}
-	}
-	/* 小屏横屏（手机横屏）：导航移到右边缘垂直居中，方便拇指点击 */
-	@media (min-aspect-ratio: 1 / 1) and (max-width: 1024px) {
-		#site-nav {
-			left: auto !important;
-			right: 12px !important;
-			top: 50% !important;
-			transform: translateY(-50%);
 		}
 	}
 		position: absolute;
@@ -171,9 +164,6 @@ const total = site.nav.length + 1; // 导航项 + 主题切换
 		pointer-events: none;
 		transition-delay: calc((var(--n) - var(--i)) * 45ms);
 	}
-	#site-nav.nav-dragging {
-		user-select: none;
-	}
 	/* 页面加载/切换时禁用折叠动画（初始化完成后由脚本移除） */
 	html.no-nav-anim #site-nav .nav-item,
 	html.no-nav-anim #site-nav .nav-backdrop {
@@ -208,20 +198,8 @@ const total = site.nav.length + 1; // 导航项 + 主题切换
 	});
 
 	const nav = document.getElementById('site-nav');
-	const handle = document.querySelector<HTMLElement>('[data-drag-handle]');
-	if (nav && handle) {
-		// 恢复上次拖拽位置
-		try {
-			const saved = JSON.parse(localStorage.getItem('nav-pos') ?? 'null') as { x: number; y: number } | null;
-			if (saved) {
-				nav.style.left = `${saved.x}px`;
-				nav.style.top = `${saved.y}px`;
-			}
-		} catch {
-			/* 忽略损坏的存储 */
-		}
-
-		// 点击切换折叠、拖拽移动
+	if (nav) {
+		// 点击切换折叠（固定居中，不支持拖拽）
 		const setCollapsed = (collapsed: boolean) => {
 			nav.classList.toggle('nav-collapsed', collapsed);
 			try {
@@ -235,64 +213,9 @@ const total = site.nav.length + 1; // 导航项 + 主题切换
 		} catch {
 			/* 忽略 */
 		}
-
-		let dragging = false;
-		let moved = false;
-		let downTarget: EventTarget | null = null;
-		let startX = 0;
-		let startY = 0;
-		let origX = 0;
-		let origY = 0;
-
-		const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max);
-
-		const onDown = (e: PointerEvent) => {
-			// 点击交互元素（导航链接/主题按钮）时不拖拽
-			if ((e.target as HTMLElement).closest('a, button, summary, input')) return;
-			dragging = true;
-			moved = false;
-			downTarget = e.target;
-			startX = e.clientX;
-			startY = e.clientY;
-			const r = nav.getBoundingClientRect();
-			origX = r.left;
-			origY = r.top;
-			nav.classList.add('nav-dragging');
-			handle.setPointerCapture(e.pointerId);
-		};
-		const onMove = (e: PointerEvent) => {
-			if (!dragging) return;
-			const dx = e.clientX - startX;
-			const dy = e.clientY - startY;
-			if (Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true;
-			if (moved) {
-				const w = nav.offsetWidth;
-				const h = nav.offsetHeight;
-				nav.style.left = `${clamp(origX + dx, 0, window.innerWidth - w)}px`;
-				nav.style.top = `${clamp(origY + dy, 0, window.innerHeight - h)}px`;
-			}
-		};
-		const onUp = () => {
-			if (!dragging) return;
-			dragging = false;
-			if (moved) {
-				try {
-					localStorage.setItem('nav-pos', JSON.stringify({ x: parseInt(nav.style.left), y: parseInt(nav.style.top) }));
-				} catch {
-					/* 忽略 */
-				}
-			} else if (downTarget instanceof HTMLElement && downTarget.closest('#nav-toggle')) {
-				// 未拖动且点在头像上 → 点击切换折叠/展开
-				setCollapsed(!nav.classList.contains('nav-collapsed'));
-			}
-			downTarget = null;
-			nav.classList.remove('nav-dragging');
-		};
-
-		handle.addEventListener('pointerdown', onDown);
-		handle.addEventListener('pointermove', onMove);
-		handle.addEventListener('pointerup', onUp);
-		handle.addEventListener('pointercancel', onUp);
+		document.getElementById('nav-toggle')?.addEventListener('click', () => {
+			setCollapsed(!nav.classList.contains('nav-collapsed'));
+		});
 	}
 
 	// 初始化完成，恢复折叠/展开动画
