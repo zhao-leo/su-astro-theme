@@ -76,6 +76,12 @@ const blogs = defineCollection({
 		pinned: z.boolean().default(false),
 		/** 设置后正文加密，需输入密码解锁（构建时 AES-GCM 加密） */
 		password: z.string().optional(),
+		/** 辅助作者（正文标题下显示，如 AI 协助/合作者） */
+		assisted_by: z.string().optional(),
+		/** 无 AI 参与标记（列表 Card + 正文标题下显示） */
+		no_ai: z.boolean().default(false),
+		/** 版权许可证（SPDX 格式，正文下方卡片显示） */
+		license: z.string().default('CC-BY-NC-SA-4.0'),
 	}),
 });
 

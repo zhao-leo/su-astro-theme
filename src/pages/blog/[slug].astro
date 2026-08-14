@@ -1,6 +1,7 @@
 ---
 import RadialLayout from '../../layouts/RadialLayout.astro';
 import EncryptedPost from '../../components/post/EncryptedPost.astro';
+import { Icon } from 'astro-icon/components';
 import { getPosts } from '../../lib/posts';
 import { formatDate } from '../../lib/utils';
 import { render } from 'astro:content';
@@ -15,6 +16,17 @@ export async function getStaticPaths() {
 
 const { post, newer, older } = Astro.props;
 const { Content } = await render(post);
+
+// 版权许可链接：CC 许可证 → creativecommons.org；其他 SPDX → spdx.org
+const license = post.data.license;
+const licenseUrl = license.startsWith('CC-')
+	? `https://creativecommons.org/licenses/${license
+			.toLowerCase()
+			.replace('cc-', '')
+			.split('-')
+			.slice(0, -1)
+			.join('-')}/4.0/`
+	: `https://spdx.org/licenses/${license}.html`;
 ---
 
 <RadialLayout
@@ -37,6 +49,15 @@ const { Content } = await render(post);
 						</a>
 					))}
 				</div>
+				{/* 辅助作者 / 无 AI 参与标记 */}
+				{(post.data.assisted_by || post.data.no_ai) && (
+					<div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
+						{post.data.no_ai && (
+							<span class="badge badge-success badge-soft badge-sm" title="本篇为纯人工创作">无 AI 参与</span>
+						)}
+						{post.data.assisted_by && <span class="text-sm opacity-70">辅助：{post.data.assisted_by}</span>}
+					</div>
+				)}
 			</header>
 
 			{post.data.password ? (
@@ -46,6 +67,21 @@ const { Content } = await render(post);
 					<Content />
 				</div>
 			)}
+
+			{/* 版权许可卡片：正文与上一篇/下一篇之间 */}
+			<div class="glass rounded-box mt-8 p-4 flex items-center gap-3">
+				<Icon name="lucide:scale" class="w-5 h-5 shrink-0 opacity-60" />
+				<div class="flex-1 min-w-0">
+					<p class="text-sm font-semibold">版权许可</p>
+					<p class="text-xs opacity-60 mt-0.5 leading-relaxed">
+						除特别注明外，本文采用
+						<a class="link link-hover" href={licenseUrl} target="_blank" rel="noopener">
+							{license}
+						</a>
+						许可协议进行许可。
+					</p>
+				</div>
+			</div>
 
 			{/* 上一篇 / 下一篇 */}
 			<nav class="flex items-center justify-between gap-4 mt-10 pt-6 border-t border-base-300">
