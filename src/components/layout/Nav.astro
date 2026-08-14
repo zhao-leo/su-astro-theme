@@ -63,19 +63,21 @@ const total = site.nav.length + 1; // 导航项 + 主题切换
 <nav id="mobile-bar" class="fixed inset-x-0 bottom-0 z-20" aria-label="底部导航">
 	<div class="flex items-stretch glass-strong border-t border-base-300/60" style="padding-bottom: env(safe-area-inset-bottom)">
 		{site.nav.map((item) => (
-			<a class="flex-1 flex flex-col items-center justify-center gap-0.5 py-2" href={item.href}>
+			<a class="flex-1 flex flex-col items-center justify-center py-2.5" href={item.href} title={item.label} aria-label={item.label}>
 				{item.icon ? <Icon name={item.icon} class="w-5 h-5" /> : <span class="text-sm font-semibold">{item.label.slice(0, 1)}</span>}
-				<span class="text-[0.6rem] opacity-70">{item.label}</span>
 			</a>
 		))}
 		<button
-			class="theme-toggle flex-1 flex flex-col items-center justify-center gap-0.5 py-2 swap swap-rotate"
+			class="theme-toggle flex-1 swap swap-rotate py-2.5"
 			title="切换深色 / 浅色"
 			aria-label="切换深色 / 浅色"
 		>
-			<span class="swap-off"><Icon name="lucide:moon" class="w-5 h-5" /></span>
-			<span class="swap-on"><Icon name="lucide:sun" class="w-5 h-5" /></span>
-			<span class="text-[0.6rem] opacity-70">主题</span>
+			<span class="swap-off flex items-center justify-center">
+				<Icon name="lucide:moon" class="w-5 h-5" />
+			</span>
+			<span class="swap-on flex items-center justify-center">
+				<Icon name="lucide:sun" class="w-5 h-5" />
+			</span>
 		</button>
 	</div>
 </nav>
