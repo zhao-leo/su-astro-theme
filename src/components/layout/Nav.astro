@@ -80,8 +80,24 @@ const total = site.nav.length + 1; // 导航项 + 主题切换
 			--r: 50px;
 		}
 	}
-	/* 圆形底：覆盖整个排列区域，收起时向中心收缩 */
-	#site-nav .nav-backdrop {
+	/* 竖屏/窄高视口（手机竖屏）：导航移到右下角拇指区（覆盖拖拽位置） */
+	@media (max-aspect-ratio: 1 / 1) {
+		#site-nav {
+			left: auto !important;
+			right: 16px !important;
+			top: auto !important;
+			bottom: 24px !important;
+		}
+	}
+	/* 小屏横屏（手机横屏）：导航移到右边缘垂直居中，方便拇指点击 */
+	@media (min-aspect-ratio: 1 / 1) and (max-width: 1024px) {
+		#site-nav {
+			left: auto !important;
+			right: 12px !important;
+			top: 50% !important;
+			transform: translateY(-50%);
+		}
+	}
 		position: absolute;
 		left: 50%;
 		top: 50%;

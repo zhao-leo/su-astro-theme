@@ -34,29 +34,28 @@ interface Props {
 
 const { rings, core, centerX = -60, centerY = 400, progress = false } = Astro.props;
 const maxR = rings.length ? Math.max(...rings.map((r) => r.radius)) : 0;
-const coreR = 170; // 核心实心圆半径（完整存在，随圆心偏移只露部分）
-const coreX = centerX + coreR * 0.62; // 核心文字置于核心圆可见区中心
-const progressR = Math.max(300, coreR + 130); // 进度环半径
+const coreR = 170; // 核心实心圆半径（逻辑基准，随 --s 缩放）
+const coreX = coreR * 0.62; // 核心文字偏移（相对圆心，逻辑基准）
+const progressR = Math.max(300, coreR + 130); // 进度环半径（逻辑基准）
 const pad = Math.max(maxR, coreR, progress ? progressR : 0) + 50; // viewBox 需容纳进度环
 const size = pad * 2;
-const iconR = 38; // 中层图标节点半径（80px 直径的一半）
+const iconR = 38; // 中层图标节点半径（逻辑基准）
 
-const toXY = (r: number, deg: number) => {
-	const a = (deg * Math.PI) / 180;
-	return { x: centerX + r * Math.cos(a), y: centerY + r * Math.sin(a) };
-};
 const polar = (r: number, deg: number) => {
 	const a = (deg * Math.PI) / 180;
 	return { x: r * Math.cos(a), y: r * Math.sin(a) };
 };
 ---
 
-<div class="circle-stage" style={`--center-x: ${centerX}px; --center-y: ${centerY}px`}>
+<div
+	class="circle-stage"
+	style={`--s: 1; --cx: ${centerX}px; --cy: ${centerY}px; --pad: ${pad}px; --vb: ${size}px`}
+>
 	<div class="circle">
-		<!-- SVG：同心圆环 + 连接线 + 核心实心圆 -->
+		<!-- SVG：同心圆环 + 连接线 + 核心实心圆（逻辑坐标系，随 --s 整体缩放） -->
 		<svg
 			class="circle-svg"
-			style={`left: ${centerX - pad}px; top: ${centerY - pad}px; width: ${size}px; height: ${size}px`}
+			style={`left: calc(var(--cx) - var(--pad) * var(--s)); top: calc(var(--cy) - var(--pad) * var(--s)); width: calc(var(--vb) * var(--s)); height: calc(var(--vb) * var(--s))`}
 			viewBox={`${-pad} ${-pad} ${size} ${size}`}
 			aria-hidden="true"
 		>
@@ -96,7 +95,7 @@ const polar = (r: number, deg: number) => {
 		<!-- 核心内容（可点击：折叠/展开外环与中环） -->
 		<div
 			class="core"
-			style={`left: ${coreX}px; top: ${centerY}px; transform: translate(-50%, -50%)`}
+			style={`left: calc(var(--cx) + ${coreX}px * var(--s)); top: var(--cy); transform: translate(-50%, -50%)`}
 			role="button"
 			tabindex="0"
 			aria-expanded="true"
@@ -106,15 +105,15 @@ const polar = (r: number, deg: number) => {
 			<p class="core-title">{core.title}</p>
 		</div>
 
-		<!-- 各环节点：图标（node-icon）或标签（node-tag），极坐标定位 -->
+		<!-- 各环节点：图标（node-icon）或标签（node-tag），极坐标定位（偏移基准 --nx/--ny，随 --s 缩放） -->
 		{rings.map((ring) =>
 			ring.nodes.map((n) => {
-				const pos = toXY(ring.radius, n.angle);
+				const off = polar(ring.radius, n.angle);
 				const isIcon = !!n.icon;
 				const cls = ['node', isIcon ? 'node-icon' : 'node-tag', n.active ? 'active' : '']
 					.filter(Boolean)
 					.join(' ');
-				const style = `left: ${pos.x}px; top: ${pos.y}px; transform: translate(-50%, -50%)`;
+				const style = `--nx: ${off.x}px; --ny: ${off.y}px; left: calc(var(--cx) + var(--nx) * var(--s)); top: calc(var(--cy) + var(--ny) * var(--s)); transform: translate(-50%, -50%)`;
 				const inner = isIcon ? <Icon name={n.icon} class="w-6 h-6" /> : <span class="tag-text">{n.text}</span>;
 				return n.href ? (
 					<a class={cls} style={style} href={n.href} title={n.text}>
@@ -199,12 +198,12 @@ const polar = (r: number, deg: number) => {
 		text-align: center;
 	}
 	.core-title {
-		font-size: 1.3rem;
+		font-size: calc(1.3rem * var(--s, 1));
 		font-weight: 700;
 		color: var(--color-primary-content);
 	}
 	.core-sub {
-		font-size: 0.65rem;
+		font-size: calc(0.65rem * var(--s, 1));
 		letter-spacing: 0.18em;
 		color: var(--color-primary-content);
 		opacity: 0.75;
@@ -222,8 +221,8 @@ const polar = (r: number, deg: number) => {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		width: 4.5rem;
-		height: 4.5rem;
+		width: calc(4.5rem * var(--s, 1));
+		height: calc(4.5rem * var(--s, 1));
 		border-radius: 9999px;
 		border: 1px solid var(--glass-border);
 		background: var(--glass-bg-strong);
@@ -239,6 +238,10 @@ const polar = (r: number, deg: number) => {
 		backdrop-filter: blur(12px) saturate(1.3);
 		-webkit-backdrop-filter: blur(12px) saturate(1.3);
 	}
+	.node-icon svg {
+		width: calc(1.5rem * var(--s, 1));
+		height: calc(1.5rem * var(--s, 1));
+	}
 	a.node-icon:hover {
 		transform: translate(-50%, -50%) scale(1.12);
 		box-shadow:
@@ -249,11 +252,11 @@ const polar = (r: number, deg: number) => {
 	/* 标签节点：知识节点风（弱底、小圆角，文字水平） */
 	.node-tag {
 		border-radius: 8px;
-		padding: 0.3rem 0.9rem;
+		padding: calc(0.3rem * var(--s, 1)) calc(0.9rem * var(--s, 1));
 		border: 1px solid var(--glass-border);
 		background: color-mix(in oklab, var(--color-base-100) 45%, transparent);
 		color: var(--color-base-content);
-		font-size: 1.02rem;
+		font-size: calc(1.02rem * var(--s, 1));
 		backdrop-filter: blur(6px);
 		-webkit-backdrop-filter: blur(6px);
 	}
@@ -279,11 +282,11 @@ const polar = (r: number, deg: number) => {
 	/* 标签节点：知识节点风（弱底、小圆角，文字始终水平） */
 	.node-tag {
 		border-radius: 8px;
-		padding: 0.3rem 0.9rem;
+		padding: calc(0.3rem * var(--s, 1)) calc(0.9rem * var(--s, 1));
 		border: 1px solid var(--glass-border);
 		background: color-mix(in oklab, var(--color-base-100) 45%, transparent);
 		color: var(--color-base-content);
-		font-size: 1.02rem;
+		font-size: calc(1.02rem * var(--s, 1));
 		backdrop-filter: blur(6px);
 		-webkit-backdrop-filter: blur(6px);
 	}
@@ -319,6 +322,34 @@ const polar = (r: number, deg: number) => {
 		opacity: 0;
 		transform: translate(-50%, -50%) scale(0) !important;
 		pointer-events: none;
+	}
+	/* 环：外层弱化（0.4）、中圈透明（0.15）——远景→中景→前景分层 */
+	.ring-outer {
+		fill: none;
+		stroke: color-mix(in oklab, var(--color-primary) 26%, var(--color-base-300));
+		opacity: 0.4;
+		stroke-linecap: round;
+		stroke-width: calc(4px * var(--s, 1));
+	}
+	.ring-middle {
+		fill: none;
+		stroke: color-mix(in oklab, var(--color-primary) 20%, var(--color-base-300));
+		opacity: 0.15;
+		stroke-linecap: round;
+		stroke-dasharray: 3 10;
+		stroke-width: calc(15px * var(--s, 1));
+	}
+	/* 连接线：核心 → 中层节点（星图连线） */
+	.node-line {
+		stroke: color-mix(in oklab, var(--color-primary) 30%, var(--color-base-300));
+		stroke-width: calc(1.5px * var(--s, 1));
+		stroke-dasharray: 2 6;
+		opacity: 0.35;
+	}
+	/* 核心实心圆 */
+	.core-fill {
+		fill: var(--color-primary);
+		opacity: 0.95;
 	}
 	/* 进度弧：外圈随阅读进度增长（--ring-progress 由布局滚动驱动） */
 	.ring-progress {
@@ -368,4 +399,23 @@ const polar = (r: number, deg: number) => {
 			toggle();
 		}
 	});
+
+	// —— 响应式缩放：按容器高度自动计算缩放系数，圆环自适应任意视口 ——
+	// 基准：容器高 800px → s=1（视觉与设计稿一致）；s 随高度线性缩放，clamp 0.35~1.15
+	const stageEl = document.querySelector<HTMLElement>('.circle-stage');
+	const wrap = document.querySelector<HTMLElement>('.circle-wrap');
+	if (stageEl && wrap) {
+		const apply = () => {
+			const ch = wrap.clientHeight || window.innerHeight;
+			const s = Math.min(1.15, Math.max(0.35, ch / 800));
+			const cy = ch / 2; // 圆心垂直居中（任意分辨率自适应）
+			const cx = -60 * s; // 左裁切：圆心在容器左侧外（随缩放）
+			stageEl.style.setProperty('--s', s.toFixed(3));
+			stageEl.style.setProperty('--cx', `${cx.toFixed(1)}px`);
+			stageEl.style.setProperty('--cy', `${cy.toFixed(1)}px`);
+		};
+		apply();
+		const ro = new ResizeObserver(apply);
+		ro.observe(wrap);
+	}
 </script>

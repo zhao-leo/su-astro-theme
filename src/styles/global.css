@@ -291,3 +291,9 @@ body {
 .circle-wrap:has(.circle-stage.collapsed) {
 	width: 160px;
 }
+/* 竖屏/窄高视口（长边非底边，如手机竖屏）：环隐藏，内容全宽 */
+@media (max-aspect-ratio: 1 / 1) {
+	.circle-wrap {
+		display: none;
+	}
+}
