@@ -44,7 +44,7 @@ const payload: EncryptedPayload = await encryptPost(md, password);
 					</svg>
 				</button>
 			</div>
-			<button type="button" class="btn btn-primary btn-sm">解锁</button>
+			<button type="button" class="unlock-btn btn btn-primary btn-sm">解锁</button>
 		</div>
 		<p class="error text-error text-sm mt-3 hidden">密码错误，请重试</p>
 	</div>
@@ -58,7 +58,7 @@ const payload: EncryptedPayload = await encryptPost(md, password);
 <script>
 	const box = document.querySelector<HTMLElement>('.encrypted-post');
 	const input = box?.querySelector<HTMLInputElement>('input[type="password"]');
-	const unlockBtn = box?.querySelector<HTMLButtonElement>('button');
+	const unlockBtn = box?.querySelector<HTMLButtonElement>('.unlock-btn');
 	const revealBtn = box?.querySelector<HTMLButtonElement>('.reveal-btn');
 	const errorEl = box?.querySelector<HTMLElement>('.error');
 	const content = box?.querySelector<HTMLElement>('.content .prose');
