@@ -48,7 +48,7 @@ const total = site.nav.length + 1; // 导航项 + 主题切换
 		<!-- 主题切换：同样进入圆形排列 -->
 		<button
 			id="theme-toggle"
-			class="nav-item btn btn-ghost btn-circle swap swap-rotate"
+			class="nav-item theme-toggle btn btn-ghost btn-circle swap swap-rotate"
 			title="切换深色 / 浅色"
 			aria-label="切换深色 / 浅色"
 			style={`--i: ${site.nav.length}; --n: ${total}`}
@@ -58,6 +58,27 @@ const total = site.nav.length + 1; // 导航项 + 主题切换
 		</button>
 	</div>
 </header>
+
+{/* 竖屏底部导航条（长边非底边时显示，替代圆形菜单） */}
+<nav id="mobile-bar" class="fixed inset-x-0 bottom-0 z-20" aria-label="底部导航">
+	<div class="flex items-stretch glass-strong border-t border-base-300/60" style="padding-bottom: env(safe-area-inset-bottom)">
+		{site.nav.map((item) => (
+			<a class="flex-1 flex flex-col items-center justify-center gap-0.5 py-2" href={item.href}>
+				{item.icon ? <Icon name={item.icon} class="w-5 h-5" /> : <span class="text-sm font-semibold">{item.label.slice(0, 1)}</span>}
+				<span class="text-[0.6rem] opacity-70">{item.label}</span>
+			</a>
+		))}
+		<button
+			class="theme-toggle flex-1 flex flex-col items-center justify-center gap-0.5 py-2 swap swap-rotate"
+			title="切换深色 / 浅色"
+			aria-label="切换深色 / 浅色"
+		>
+			<span class="swap-off"><Icon name="lucide:moon" class="w-5 h-5" /></span>
+			<span class="swap-on"><Icon name="lucide:sun" class="w-5 h-5" /></span>
+			<span class="text-[0.6rem] opacity-70">主题</span>
+		</button>
+	</div>
+</nav>
 
 <!-- header 已解析：立即恢复折叠状态（此时为页面初始状态，无动画/无闪烁）；并禁用折叠动画直到初始化完成 -->
 <script is:inline>
@@ -80,13 +101,17 @@ const total = site.nav.length + 1; // 导航项 + 主题切换
 			--r: 50px;
 		}
 	}
-	/* 竖屏/窄高视口（手机竖屏）：导航移到右下角拇指区（覆盖拖拽位置） */
+	/* 默认隐藏底部导航条（非竖屏） */
+	#mobile-bar {
+		display: none;
+	}
+	/* 竖屏/窄高视口（手机竖屏）：隐藏圆形菜单，改用底部导航条（#mobile-bar） */
 	@media (max-aspect-ratio: 1 / 1) {
 		#site-nav {
-			left: auto !important;
-			right: 16px !important;
-			top: auto !important;
-			bottom: 24px !important;
+			display: none !important;
+		}
+		#mobile-bar {
+			display: block;
 		}
 	}
 	/* 小屏横屏（手机横屏）：导航移到右边缘垂直居中，方便拇指点击 */
@@ -159,7 +184,7 @@ const total = site.nav.length + 1; // 导航项 + 主题切换
 	const LIGHT_THEME = 'nord';
 	const DARK_THEME = 'business';
 	const isDark = (t: string) => DARK_THEMES.includes(t);
-	const toggle = document.getElementById('theme-toggle');
+	const toggles = document.querySelectorAll<HTMLElement>('.theme-toggle');
 
 	const applyTheme = (theme: string) => {
 		document.documentElement.dataset.theme = theme;
@@ -169,13 +194,15 @@ const total = site.nav.length + 1; // 导航项 + 主题切换
 		} catch {
 			/* 忽略 */
 		}
-		toggle?.classList.toggle('swap-active', isDark(theme));
+		toggles.forEach((t) => t.classList.toggle('swap-active', isDark(theme)));
 	};
 	applyTheme(document.documentElement.dataset.theme || LIGHT_THEME);
 
-	toggle?.addEventListener('click', () => {
-		const current = document.documentElement.dataset.theme;
-		applyTheme(isDark(current ?? LIGHT_THEME) ? LIGHT_THEME : DARK_THEME);
+	toggles.forEach((t) => {
+		t.addEventListener('click', () => {
+			const current = document.documentElement.dataset.theme;
+			applyTheme(isDark(current ?? LIGHT_THEME) ? LIGHT_THEME : DARK_THEME);
+		});
 	});
 
 	const nav = document.getElementById('site-nav');
