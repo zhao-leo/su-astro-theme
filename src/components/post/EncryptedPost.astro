@@ -19,12 +19,31 @@ const payload: EncryptedPayload = await encryptPost(md, password);
 		<p class="font-bold text-lg">这篇文章已加密</p>
 		<p class="opacity-60 text-sm mt-1">输入密码解锁阅读</p>
 		<div class="flex gap-2 justify-center mt-6">
-			<input
-				type="password"
-				class="input input-sm input-bordered w-56"
-				placeholder="请输入密码"
-				aria-label="密码"
-			/>
+			<div class="relative">
+				<input
+					type="password"
+					class="input input-sm input-bordered w-56 pr-9"
+					placeholder="请输入密码"
+					aria-label="密码"
+				/>
+				<button
+					type="button"
+					class="reveal-btn absolute right-1.5 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-circle opacity-60 hover:opacity-100"
+					aria-label="显示 / 隐藏密码"
+					tabindex="-1"
+				>
+					<svg class="w-4 h-4 eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+						<path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+						<path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+						<line x1="2" x2="22" y1="2" y2="22" />
+					</svg>
+					<svg class="w-4 h-4 eye hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+						<circle cx="12" cy="12" r="3" />
+					</svg>
+				</button>
+			</div>
 			<button type="button" class="btn btn-primary btn-sm">解锁</button>
 		</div>
 		<p class="error text-error text-sm mt-3 hidden">密码错误，请重试</p>
@@ -40,6 +59,7 @@ const payload: EncryptedPayload = await encryptPost(md, password);
 	const box = document.querySelector<HTMLElement>('.encrypted-post');
 	const input = box?.querySelector<HTMLInputElement>('input[type="password"]');
 	const unlockBtn = box?.querySelector<HTMLButtonElement>('button');
+	const revealBtn = box?.querySelector<HTMLButtonElement>('.reveal-btn');
 	const errorEl = box?.querySelector<HTMLElement>('.error');
 	const content = box?.querySelector<HTMLElement>('.content .prose');
 	const payload = JSON.parse(box?.dataset.payload ?? '{}') as {
@@ -49,6 +69,15 @@ const payload: EncryptedPayload = await encryptPost(md, password);
 		iterations: number;
 	};
 
+	// 显示 / 隐藏密码
+	revealBtn?.addEventListener('click', () => {
+		if (!input) return;
+		const show = input.type === 'password';
+		input.type = show ? 'text' : 'password';
+		revealBtn.querySelector('.eye')?.classList.toggle('hidden', show);
+		revealBtn.querySelector('.eye-off')?.classList.toggle('hidden', !show);
+		input.focus();
+	});
 	const base64ToBytes = (b64: string) =>
 		Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 
